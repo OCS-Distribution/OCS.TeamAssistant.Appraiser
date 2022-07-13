@@ -1,10 +1,12 @@
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
+using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Domain;
 
 public sealed class AssessmentSession
 {
     public AssessmentSessionId Id { get; private set; } = default!;
+    public long ChatId { get; private set; }
     public Appraiser Moderator { get; private set; } = default!;
     public string Title { get; private set; } = default!;
     public AssessmentSessionState State { get; private set; }
@@ -18,11 +20,12 @@ public sealed class AssessmentSession
         _appraisers = new();
     }
     
-    public static AssessmentSession Create()
+    public static AssessmentSession Create(long chatId)
     {
         return new()
         {
             Id = new AssessmentSessionId(Guid.NewGuid()),
+            ChatId = chatId,
             Moderator = Appraiser.Empty,
             CurrentStory = Story.Empty,
             State = AssessmentSessionState.Draft,
@@ -85,7 +88,7 @@ public sealed class AssessmentSession
             throw new ArgumentNullException(nameof(appraiser));
 
         if (_appraisers.Any(a => a.Id == appraiser.Id))
-            throw new AppraiserException($"Участник {appraiser.Name} уже подключен.");
+            throw new AppraiserException($"Вы уже подключен к сессии {Title}.");
         
         _appraisers.Add(appraiser);
 

@@ -1,10 +1,12 @@
 using System.Collections.Concurrent;
 using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Domain;
+using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
+using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.DataAccess.InMemory;
 
-internal sealed class AssessmentSessionRepository : IAssessmentSessionRepository
+internal sealed class AssessmentSessionInMemoryRepository : IAssessmentSessionRepository
 {
     private ConcurrentBag<AssessmentSession> _store = new ();
 
@@ -19,8 +21,8 @@ internal sealed class AssessmentSessionRepository : IAssessmentSessionRepository
         {
             0 => Task.FromResult<AssessmentSession?>(default),
             1 => Task.FromResult<AssessmentSession?>(assessmentSessions[0]),
-            _ => throw new ApplicationException(
-                $"More than one session {assessmentSessionId} found {assessmentSessions.Length}.")
+            _ => throw new AppraiserException(
+                $"Найдено более одной активной сессии {assessmentSessionId.Value} ({assessmentSessions.Length}).")
         };
     }
 
@@ -35,8 +37,8 @@ internal sealed class AssessmentSessionRepository : IAssessmentSessionRepository
         {
             0 => Task.FromResult<AssessmentSession?>(default),
             1 => Task.FromResult<AssessmentSession?>(assessmentSessions[0]),
-            _ => throw new ApplicationException(
-                $"More than one session for appraiser {appraiserId} found {assessmentSessions.Length}.")
+            _ => throw new AppraiserException(
+                $"Найдено более одной активной сессии для участника {appraiserId.Value} ({assessmentSessions.Length}).")
         };
     }
 
@@ -51,8 +53,8 @@ internal sealed class AssessmentSessionRepository : IAssessmentSessionRepository
         {
             0 => Task.FromResult<AssessmentSession?>(default),
             1 => Task.FromResult<AssessmentSession?>(assessmentSessions[0]),
-            _ => throw new ApplicationException(
-                $"More than one session for moderator {moderatorId.Value} found {assessmentSessions.Length}.")
+            _ => throw new AppraiserException(
+                $"Найдено более одной активной сессии для модератора {moderatorId.Value} ({assessmentSessions.Length}).")
         };
     }
 

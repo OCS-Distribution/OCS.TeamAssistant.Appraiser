@@ -3,6 +3,7 @@ using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ConnectAppraiser;
 using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
+using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.ConnectAppraiser;
 
@@ -33,6 +34,6 @@ internal sealed class ConnectAppraiserCommandHandler : IRequestHandler<ConnectAp
         
         await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
         
-        return new ConnectAppraiserResult(assessmentSession.Title);
+        return new ConnectAppraiserResult(assessmentSession.ChatId, assessmentSession.Title, command.AppraiserName);
     }
 }

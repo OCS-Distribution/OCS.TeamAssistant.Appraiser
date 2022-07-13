@@ -4,7 +4,7 @@ public sealed class Story
 {
     public static readonly Story Empty = new()
     {
-        Title = string.Empty
+        Title = nameof(Story)
     };
     
     public string Title { get; private set; } = default!;

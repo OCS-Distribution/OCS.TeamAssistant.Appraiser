@@ -12,7 +12,7 @@ builder.Services
     .AddMediatR(typeof(CreateAssessmentSessionCommand));
 
 builder.Services
-    .AddSingleton<IEstimatesService, EstimatesService>()
+    .AddSingleton<IReportBuilder, ReportBuilder>()
     .AddSingleton<CommandFactory>()
     .AddSingleton<CommandResultProcessor>()
     .AddHostedService<TelegramBotListener>()

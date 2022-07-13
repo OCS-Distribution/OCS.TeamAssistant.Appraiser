@@ -11,34 +11,53 @@ using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.SendMessage;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ShowAppraiserList;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndEstimates;
 using OCS.TeamAssistant.Appraiser.Domain;
+using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Backend.Services;
 
 internal sealed class CommandFactory
 {
-    const int ParameterIndex = 1;
-    private readonly Dictionary<string, (Func<string, long, string, IBaseRequest?> Action, string Example)> _commandList;
     private readonly IServiceProvider _serviceProvider;
-    private readonly HashSet<string> _targets = new(new[] { "1", "2", "3", "5", "8", "13", "21" });
+    private readonly Dictionary<string, (Func<string, long, long, string, IBaseRequest?> Func, string Help)> _commands;
+    private readonly HashSet<string> _targets;
 
     public CommandFactory(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-        _commandList = new()
+        
+        _commands = new()
         {
-            [Commands.Start] = (CreateConnectAppraiserCommand, string.Empty),
-            [Commands.New] = ((c, uId, uName) => new CreateAssessmentSessionCommand(uId, uName), $"{Commands.New} - создать сессию"),
-            [Commands.Users] = ((c, uId, uName) => new ShowAppraiserListCommand(uId, uName), $"{Commands.Users} - список пользователей"),
-            [Commands.Add] = (CreateAddStoryCommand, $"{Commands.Add}{{task}} - добавление задачи для оценки"),
-            [Commands.Set] = (CreateEstimateStoryCommand, $"{Commands.Set}{{3}} - задать оценку"),
-            [Commands.End] = ((c, uId, uName) => new EndEstimateCommand(uId, uName), $"{Commands.End} - завершение оценки"),
-            [Commands.Exit] = ((c, uId, uName) => new EndAssessmentSessionCommand(uId, uName), $"{Commands.Exit} - завершение сессии"),
-            [Commands.Help] = ((c, uId, uName) => CreateHelpCommand(), string.Empty)
+            [Commands.Start] = ((c, cId, uId, uName) => CreateConnectAppraiserCommand(c, uId, uName), string.Empty),
+            [Commands.New] = (
+                (c, cId, uId, uName) => new CreateAssessmentSessionCommand(cId, uId, uName),
+                $"{Commands.New} - создать сессию"),
+            [Commands.Users] = (
+                (c, cId, uId, uName) => new ShowAppraiserListCommand(uId, uName),
+                $"{Commands.Users} - список пользователей"),
+            [Commands.Add] = (
+                (c, cId, uId, uName) => CreateAddStoryCommand(c, uId, uName),
+                $"{Commands.Add}{{task}} - добавление задачи для оценки"),
+            [Commands.Set] = (
+                (c, cId, uId, uName) => CreateEstimateStoryCommand(c, uId, uName),
+                $"{Commands.Set}{{3}} - задать оценку"),
+            [Commands.End] = (
+                (c, cId, uId, uName) => new EndEstimateCommand(uId, uName),
+                $"{Commands.End} - завершение оценки"),
+            [Commands.Exit] = (
+                (c, cId, uId, uName) => new EndAssessmentSessionCommand(uId, uName),
+                $"{Commands.Exit} - завершение сессии"),
+            [Commands.Help] = ((c, cId, uId, uName) => CreateHelpCommand(), string.Empty)
         };
+        
+        var values = Enum.GetValues<AssessmentValue>()
+            .Where(i => i > 0)
+            .Select(i => ((int)i).ToString());
+        _targets = new HashSet<string>(values);
     }
 
     public async Task<IBaseRequest> Create(
         string commandText,
+        long chatId,
         long userId,
         string userName,
         CancellationToken cancellationToken)
@@ -50,9 +69,9 @@ internal sealed class CommandFactory
         
         IBaseRequest? command = null;
 
-        var commandKey = _commandList.Keys.FirstOrDefault(commandText.StartsWith);
+        var commandKey = _commands.Keys.FirstOrDefault(commandText.StartsWith);
         if (commandKey is not null)
-            command = _commandList[commandKey].Action(commandText, userId, userName);
+            command = _commands[commandKey].Func(commandText, chatId, userId, userName);
 
         command ??= await FindDraftSession(commandText, userId, userName, cancellationToken);
         command ??= CreateErrorHandleCommand();
@@ -81,9 +100,9 @@ internal sealed class CommandFactory
     {
         var messageBuilder = new StringBuilder();
 
-        foreach (var command in _commandList.Values)
-            if (!string.IsNullOrWhiteSpace(command.Example))
-                messageBuilder.AppendLine(command.Example);
+        foreach (var command in _commands.Values)
+            if (!string.IsNullOrWhiteSpace(command.Help))
+                messageBuilder.AppendLine(command.Help);
 
         return new SendMessageCommand(messageBuilder.ToString());
     }
@@ -114,13 +133,12 @@ internal sealed class CommandFactory
         if (string.IsNullOrWhiteSpace(userName))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(userName));
         
+        const int parameterIndex = 1;
         var commands = commandText.Split(' ');
-        var assessmentSessionId = commands.Length > ParameterIndex
-            ? commands[ParameterIndex]
-            : string.Empty;
+        var assessmentSessionId = commands.Length > parameterIndex ? commands[parameterIndex] : string.Empty;
 
-        return !string.IsNullOrWhiteSpace(userName) && Guid.TryParse(assessmentSessionId, out var assessmentSessionIdValue)
-            ? new ConnectAppraiserCommand(assessmentSessionIdValue, userId, userName)
+        return !string.IsNullOrWhiteSpace(userName) && Guid.TryParse(assessmentSessionId, out var value)
+            ? new ConnectAppraiserCommand(value, userId, userName)
             : null;
     }
 
@@ -138,7 +156,9 @@ internal sealed class CommandFactory
         using var scope = _serviceProvider.CreateScope();
         var assessmentSessionRepository = scope.ServiceProvider.GetRequiredService<IAssessmentSessionRepository>();
 
-        var assessmentSession = await assessmentSessionRepository.FindByModerator(new AppraiserId(userId), cancellationToken);
+        var assessmentSession = await assessmentSessionRepository.FindByModerator(
+            new AppraiserId(userId),
+            cancellationToken);
 
         return assessmentSession?.State == AssessmentSessionState.Draft
             ? new ActivateAssessmentSessionCommand(userId, userName, commandText)

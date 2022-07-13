@@ -1,4 +1,4 @@
-namespace OCS.TeamAssistant.Appraiser.Application.Contracts.Common;
+namespace OCS.TeamAssistant.Appraiser.Application.Contracts;
 
 public sealed record EstimateItem(
     long AppraiserId,

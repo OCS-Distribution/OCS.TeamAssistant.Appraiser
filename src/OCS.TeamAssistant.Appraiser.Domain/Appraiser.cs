@@ -1,3 +1,5 @@
+using OCS.TeamAssistant.Appraiser.Domain.Keys;
+
 namespace OCS.TeamAssistant.Appraiser.Domain;
 
 public sealed class Appraiser

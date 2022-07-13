@@ -3,6 +3,7 @@ using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ActivateAssessmentSession;
 using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
+using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.ActivateAssessmentSession;
 
@@ -30,7 +31,7 @@ internal sealed class ActivateAssessmentSessionCommandHandler
         if (assessmentSession?.State != AssessmentSessionState.Draft)
             throw new AppraiserException($"Не найден черновик сессии для модератора {command.ModeratorName}.");
         if (!assessmentSession.Moderator.Id.Equals(moderatorId))
-            throw new ApplicationException(
+            throw new AppraiserException(
                 $"У модератора {command.ModeratorId} недостаточно прав для запуска сессии {assessmentSession.Title}.");
 
         assessmentSession.Activate(command.Title);

@@ -32,17 +32,6 @@ public sealed class StoryForEstimate
         return this;
     }
 
-    public string GetDisplayValue()
-    {
-        if (Value == AssessmentValue.None)
-            return "-";
-
-        if (Value == AssessmentValue.Unknown)
-            return "?";
-
-        return ((int)Value).ToString();
-    }
-
     public int? GetValue()
     {
         if (Value == AssessmentValue.None || Value == AssessmentValue.Unknown)

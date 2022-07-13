@@ -1,6 +1,6 @@
-using OCS.TeamAssistant.Appraiser.Domain;
+using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
-namespace OCS.TeamAssistant.Appraiser.Application.Contracts;
+namespace OCS.TeamAssistant.Appraiser.Domain;
 
 public interface IAssessmentSessionRepository
 {

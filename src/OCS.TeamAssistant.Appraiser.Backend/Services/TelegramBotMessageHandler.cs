@@ -29,28 +29,27 @@ internal sealed class TelegramBotMessageHandler
 
     public async Task Handle(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
     {
-        if (update.Message is null || update.Message.From is null || update.Message.From.IsBot)
+        if (update.Message?.From is null || update.Message.From.IsBot)
             return;
         
-        var command = update.Message.From?.Username is not null && !string.IsNullOrWhiteSpace(update.Message.Text)
+        var command = !string.IsNullOrWhiteSpace(update.Message.Text)
             ? await _commandFactory.Create(
                 update.Message.Text,
+                update.Message.Chat.Id,
                 update.Message.From.Id,
-                update.Message.From.Username,
+                GetName(update.Message.From),
                 cancellationToken)
             : _commandFactory.CreateErrorHandleCommand();
 
         try
         {
             var result = await _mediator.Send(command, cancellationToken);
+            if (result is null)
+                return;
 
-            if (result is not null)
+            var responses = _commandResultProcessor.Process(result, update.Message.Chat.Id);
+            foreach (var response in responses)
             {
-                var response = _commandResultProcessor.Process(result, update.Message.Chat.Id);
-
-                if (Notification.Empty.Equals(response))
-                    return;
-
                 if (response.TargetChatIds?.Any() == true)
                     foreach (var targetChatId in response.TargetChatIds)
                     {
@@ -62,7 +61,6 @@ internal sealed class TelegramBotMessageHandler
                         if (response.ResponseHandler is not null)
                             await response.ResponseHandler(targetChatId, message.MessageId, cancellationToken);
                     }
-
                 if (response.TargetMessages?.Any() == true)
                     foreach (var message in response.TargetMessages)
                     {
@@ -103,4 +101,7 @@ internal sealed class TelegramBotMessageHandler
         
         return Task.CompletedTask;
     }
+    
+    private string GetName(User user) => user.Username
+        ?? (string.IsNullOrWhiteSpace(user.LastName) ? user.FirstName : $"{user.FirstName} {user.LastName}");
 }
