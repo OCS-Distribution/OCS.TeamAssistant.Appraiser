@@ -9,11 +9,15 @@ namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.EndEstimates;
 internal sealed class EndEstimateCommandHandler : IRequestHandler<EndEstimateCommand, EndEstimateResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
+    private readonly IEstimatesService _estimatesService;
 
-    public EndEstimateCommandHandler(IAssessmentSessionRepository assessmentSessionRepository)
+    public EndEstimateCommandHandler(
+        IAssessmentSessionRepository assessmentSessionRepository,
+        IEstimatesService estimatesService)
     {
         _assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
+        _estimatesService = estimatesService ?? throw new ArgumentNullException(nameof(estimatesService));
     }
     
     public async Task<EndEstimateResult> Handle(EndEstimateCommand command, CancellationToken cancellationToken)
@@ -29,15 +33,7 @@ internal sealed class EndEstimateCommandHandler : IRequestHandler<EndEstimateCom
                 $"Не удалось обнаружить активную сессию для модератора {command.ModeratorName}.");
 
         var storyTitle = assessmentSession.CurrentStory.Title;
-        var items = assessmentSession.CurrentStory.StoryForEstimates
-            .Select(a => new EstimateResult(
-                a.Appraiser.Id.Value,
-                a.Appraiser.Name,
-                a.StoryExternalId,
-                a.GetValue(),
-                a.GetDisplayValue()))
-            .ToArray();
-        
+        var items = _estimatesService.CreateResultByStory(assessmentSession.CurrentStory.End());
         assessmentSession.End();
         
         return new EndEstimateResult(storyTitle, items);

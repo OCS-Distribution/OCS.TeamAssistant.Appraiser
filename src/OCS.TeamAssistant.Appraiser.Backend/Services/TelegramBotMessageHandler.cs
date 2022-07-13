@@ -46,28 +46,28 @@ internal sealed class TelegramBotMessageHandler
 
             if (result is not null)
             {
-                var response = _commandResultProcessor.Process(result, update.Message.From!.Id);
+                var response = _commandResultProcessor.Process(result, update.Message.Chat.Id);
 
                 if (Notification.Empty.Equals(response))
                     return;
 
-                if (response.TargetUserIds?.Any() == true)
-                    foreach (var userId in response.TargetUserIds)
+                if (response.TargetChatIds?.Any() == true)
+                    foreach (var targetChatId in response.TargetChatIds)
                     {
                         var message = await client.SendTextMessageAsync(
-                            userId,
+                            targetChatId,
                             response.Message,
                             cancellationToken: cancellationToken);
 
                         if (response.ResponseHandler is not null)
-                            await response.ResponseHandler(userId, message.MessageId, cancellationToken);
+                            await response.ResponseHandler(targetChatId, message.MessageId, cancellationToken);
                     }
 
                 if (response.TargetMessages?.Any() == true)
                     foreach (var message in response.TargetMessages)
                     {
                         await client.EditMessageTextAsync(
-                            new ChatId(message.UserId),
+                            new ChatId(message.ChatId),
                             message.MessageId,
                             response.Message,
                             cancellationToken: cancellationToken);

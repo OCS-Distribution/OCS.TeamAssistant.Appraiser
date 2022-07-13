@@ -8,6 +8,7 @@ public sealed class Story
     };
     
     public string Title { get; private set; } = default!;
+    public bool IaActive { get; private set; }
 
     private readonly List<Appraiser> _appraisers;
     public IReadOnlyCollection<Appraiser> Appraisers => _appraisers;
@@ -19,6 +20,7 @@ public sealed class Story
     {
         _appraisers = new();
         _storyForEstimates = new();
+        IaActive = true;
     }
     
     public static Story Create(string title, IEnumerable<Appraiser> appraisers)
@@ -68,5 +70,17 @@ public sealed class Story
         _storyForEstimates.Add(storyForEstimate);
 
         return this;
+    }
+
+    public Story End()
+    {
+        IaActive = false;
+
+        return this;
+    }
+
+    public bool EstimateEnded()
+    {
+        return !IaActive || _appraisers.Count == _storyForEstimates.Count(s => s.Value != AssessmentValue.None);
     }
 }

@@ -9,11 +9,15 @@ namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.EstimateStory;
 internal sealed class EstimateStoryCommandHandler : IRequestHandler<EstimateStoryCommand, EstimateStoryResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
+    private readonly IEstimatesService _estimatesService;
 
-    public EstimateStoryCommandHandler(IAssessmentSessionRepository assessmentSessionRepository)
+    public EstimateStoryCommandHandler(
+        IAssessmentSessionRepository assessmentSessionRepository,
+        IEstimatesService estimatesService)
     {
         _assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
+        _estimatesService = estimatesService ?? throw new ArgumentNullException(nameof(estimatesService));
     }
 
     public async Task<EstimateStoryResult> Handle(EstimateStoryCommand command, CancellationToken cancellationToken)
@@ -31,16 +35,13 @@ internal sealed class EstimateStoryCommandHandler : IRequestHandler<EstimateStor
         var appraiser = assessmentSession.Appraisers.Single(a => a.Id == appraiserId);
         assessmentSession.CurrentStory.Estimate(appraiser, command.Value);
         
-        var items = assessmentSession.CurrentStory.StoryForEstimates
-            .Select(a => new EstimateItem(
-                a.Appraiser.Id.Value,
-                a.Appraiser.Name,
-                a.StoryExternalId,
-                Exists: a.Value != AssessmentValue.None))
-            .ToArray();
+        var items = _estimatesService.CreateResultByStory(assessmentSession.CurrentStory);
 
         await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
         
-        return new EstimateStoryResult(assessmentSession.CurrentStory.Title, items);
+        return new EstimateStoryResult(
+            assessmentSession.CurrentStory.EstimateEnded(),
+            assessmentSession.CurrentStory.Title,
+            items);
     }
 }
