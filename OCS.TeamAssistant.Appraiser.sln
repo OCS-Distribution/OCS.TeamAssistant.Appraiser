@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OCS.TeamAssistant.Appraiser.Backend", "src\OCS.TeamAssistant.Appraiser.Backend\OCS.TeamAssistant.Appraiser.Backend.csproj", "{61649230-BDDC-4916-BD91-76125E1297C3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OCS.TeamAssistant.Appraiser.Domain", "src\OCS.TeamAssistant.Appraiser.Domain\OCS.TeamAssistant.Appraiser.Domain.csproj", "{9F662515-1BAD-4BCC-B8EC-184124B163C4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OCS.TeamAssistant.Appraiser.Application", "src\OCS.TeamAssistant.Appraiser.Application\OCS.TeamAssistant.Appraiser.Application.csproj", "{33B4F8C6-954D-4DB7-9B36-A361D3AE867C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "core", "core", "{15DCF7E1-1D36-4C21-A623-35A1D037A4DA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OCS.TeamAssistant.Appraiser.DataAccess.InMemory", "src\OCS.TeamAssistant.Appraiser.DataAccess.InMemory\OCS.TeamAssistant.Appraiser.DataAccess.InMemory.csproj", "{C0D1ED70-7064-4BFD-8557-19FB2918A426}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "infrastructure", "infrastructure", "{8285EFA4-C244-455D-94D1-86994A904BFF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{61649230-BDDC-4916-BD91-76125E1297C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61649230-BDDC-4916-BD91-76125E1297C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61649230-BDDC-4916-BD91-76125E1297C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61649230-BDDC-4916-BD91-76125E1297C3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F662515-1BAD-4BCC-B8EC-184124B163C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F662515-1BAD-4BCC-B8EC-184124B163C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F662515-1BAD-4BCC-B8EC-184124B163C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F662515-1BAD-4BCC-B8EC-184124B163C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33B4F8C6-954D-4DB7-9B36-A361D3AE867C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33B4F8C6-954D-4DB7-9B36-A361D3AE867C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33B4F8C6-954D-4DB7-9B36-A361D3AE867C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33B4F8C6-954D-4DB7-9B36-A361D3AE867C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C0D1ED70-7064-4BFD-8557-19FB2918A426}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C0D1ED70-7064-4BFD-8557-19FB2918A426}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C0D1ED70-7064-4BFD-8557-19FB2918A426}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C0D1ED70-7064-4BFD-8557-19FB2918A426}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{33B4F8C6-954D-4DB7-9B36-A361D3AE867C} = {15DCF7E1-1D36-4C21-A623-35A1D037A4DA}
+		{9F662515-1BAD-4BCC-B8EC-184124B163C4} = {15DCF7E1-1D36-4C21-A623-35A1D037A4DA}
+		{C0D1ED70-7064-4BFD-8557-19FB2918A426} = {8285EFA4-C244-455D-94D1-86994A904BFF}
+	EndGlobalSection
+EndGlobal
