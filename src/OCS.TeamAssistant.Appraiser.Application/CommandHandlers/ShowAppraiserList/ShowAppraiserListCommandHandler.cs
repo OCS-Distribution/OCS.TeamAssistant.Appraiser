@@ -28,8 +28,8 @@ internal sealed class ShowAppraiserListCommandHandler
             new AppraiserId(command.ModeratorId),
             cancellationToken);
 
-        if (assessmentSession is null)
-            throw new AppraiserException("Не удалось обнаружить текущую сессию.");
+        if (assessmentSession?.State != AssessmentSessionState.Active)
+            throw new AppraiserException($"Не удалось найти активную сессию для модератора {command.ModeratorName}.");
 
         var appraisers = assessmentSession.Appraisers.Select(a => a.Name).ToArray();
         

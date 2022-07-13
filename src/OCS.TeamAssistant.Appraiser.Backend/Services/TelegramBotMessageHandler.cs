@@ -1,6 +1,8 @@
+using System.Net;
 using MediatR;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
 using Telegram.Bot;
+using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 
 namespace OCS.TeamAssistant.Appraiser.Backend.Services;
@@ -25,16 +27,16 @@ internal sealed class TelegramBotMessageHandler
             commandResultProcessor ?? throw new ArgumentNullException(nameof(commandResultProcessor));
     }
 
-    public async Task Handle(ITelegramBotClient client, Update message, CancellationToken cancellationToken)
+    public async Task Handle(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
     {
-        if (message.Message is null || message.Message.From is null || message.Message.From.IsBot)
+        if (update.Message is null || update.Message.From is null || update.Message.From.IsBot)
             return;
         
-        var command = message.Message.From?.Username is not null && !string.IsNullOrWhiteSpace(message.Message.Text)
+        var command = update.Message.From?.Username is not null && !string.IsNullOrWhiteSpace(update.Message.Text)
             ? await _commandFactory.Create(
-                message.Message.Text,
-                message.Message.From.Id,
-                message.Message.From.Username,
+                update.Message.Text,
+                update.Message.From.Id,
+                update.Message.From.Username,
                 cancellationToken)
             : _commandFactory.CreateErrorHandleCommand();
 
@@ -44,28 +46,52 @@ internal sealed class TelegramBotMessageHandler
 
             if (result is not null)
             {
-                var response = _commandResultProcessor.Process(result, message.Message.From!.Id);
+                var response = _commandResultProcessor.Process(result, update.Message.From!.Id);
 
                 if (Notification.Empty.Equals(response))
                     return;
 
-                foreach (var userId in response.UserIds)
-                    await client.SendTextMessageAsync(userId, response.Message, cancellationToken: cancellationToken);
+                if (response.TargetUserIds?.Any() == true)
+                    foreach (var userId in response.TargetUserIds)
+                    {
+                        var message = await client.SendTextMessageAsync(
+                            userId,
+                            response.Message,
+                            cancellationToken: cancellationToken);
+
+                        if (response.ResponseHandler is not null)
+                            await response.ResponseHandler(userId, message.MessageId, cancellationToken);
+                    }
+
+                if (response.TargetMessages?.Any() == true)
+                    foreach (var message in response.TargetMessages)
+                    {
+                        await client.EditMessageTextAsync(
+                            new ChatId(message.UserId),
+                            message.MessageId,
+                            response.Message,
+                            cancellationToken: cancellationToken);
+                    }
             }
         }
         catch (AppraiserException appraiserException)
         {
             await client.SendTextMessageAsync(
-                message.Message.Chat.Id,
+                update.Message.Chat.Id,
                 appraiserException.Message,
                 cancellationToken: cancellationToken);
+        }
+        catch (ApiRequestException apiRequestException)
+            when (apiRequestException.ErrorCode == (int)HttpStatusCode.BadRequest)
+        {
+            // ignore
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Unhandled exception");
             
             await client.SendTextMessageAsync(
-                message.Message.Chat.Id,
+                update.Message.Chat.Id,
                 "Возникло необработанное исключение. Попробуйте выполнить команду повторно.",
                 cancellationToken: cancellationToken);
         }

@@ -13,4 +13,6 @@ public interface IAssessmentSessionRepository
     Task Add(AssessmentSession assessmentSession, CancellationToken cancellationToken);
 
     Task Update(AssessmentSession assessmentSession, CancellationToken cancellationToken);
+
+    Task Remove(AssessmentSession assessmentSession, CancellationToken cancellationToken);
 }

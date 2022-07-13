@@ -6,7 +6,7 @@ namespace OCS.TeamAssistant.Appraiser.DataAccess.InMemory;
 
 internal sealed class AssessmentSessionRepository : IAssessmentSessionRepository
 {
-    private readonly ConcurrentBag<AssessmentSession> _store = new ();
+    private ConcurrentBag<AssessmentSession> _store = new ();
 
     public Task<AssessmentSession?> FindById(AssessmentSessionId assessmentSessionId, CancellationToken cancellationToken)
     {
@@ -52,7 +52,7 @@ internal sealed class AssessmentSessionRepository : IAssessmentSessionRepository
             0 => Task.FromResult<AssessmentSession?>(default),
             1 => Task.FromResult<AssessmentSession?>(assessmentSessions[0]),
             _ => throw new ApplicationException(
-                $"More than one draft session for moderator {moderatorId} found {assessmentSessions.Length}.")
+                $"More than one session for moderator {moderatorId.Value} found {assessmentSessions.Length}.")
         };
     }
 
@@ -70,6 +70,13 @@ internal sealed class AssessmentSessionRepository : IAssessmentSessionRepository
     {
         if (assessmentSession is null)
             throw new ArgumentNullException(nameof(assessmentSession));
+        
+        return Task.CompletedTask;
+    }
+
+    public Task Remove(AssessmentSession assessmentSession, CancellationToken cancellationToken)
+    {
+        _store = new ConcurrentBag<AssessmentSession>(_store.Where(s => s != assessmentSession));
         
         return Task.CompletedTask;
     }

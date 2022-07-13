@@ -28,15 +28,15 @@ internal sealed class ActivateAssessmentSessionCommandHandler
         var assessmentSession = await _assessmentSessionRepository.GetByAppraiser(moderatorId, cancellationToken);
 
         if (assessmentSession?.State != AssessmentSessionState.Draft)
-            throw new AppraiserException($"Не найден черновик сессии для модератора {moderatorId.Value}.");
+            throw new AppraiserException($"Не найден черновик сессии для модератора {command.ModeratorName}.");
         if (!assessmentSession.Moderator.Id.Equals(moderatorId))
             throw new ApplicationException(
-                $"У модератора {command.ModeratorId} недостаточно прав для запуска сессии {assessmentSession.Id}.");
+                $"У модератора {command.ModeratorId} недостаточно прав для запуска сессии {assessmentSession.Title}.");
 
         assessmentSession.Activate(command.Title);
 
         await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
         
-        return new ActivateAssessmentSessionResult(assessmentSession.Id.Value);
+        return new ActivateAssessmentSessionResult(assessmentSession.Id.Value, assessmentSession.Title);
     }
 }

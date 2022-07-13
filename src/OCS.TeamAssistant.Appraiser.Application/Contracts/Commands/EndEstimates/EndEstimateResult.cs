@@ -1,3 +1,3 @@
 namespace OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndEstimates;
 
-public sealed record EndEstimateResult(IReadOnlyCollection<EstimateItem> Items);
+public sealed record EndEstimateResult(string StoryTitle, IReadOnlyCollection<EstimateResult> Items);

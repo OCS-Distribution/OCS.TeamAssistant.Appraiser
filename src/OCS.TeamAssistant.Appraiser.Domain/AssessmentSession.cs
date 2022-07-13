@@ -7,7 +7,7 @@ public sealed class AssessmentSession
     public AssessmentSessionId Id { get; private set; } = default!;
     public Appraiser Moderator { get; private set; } = default!;
     public string Title { get; private set; } = default!;
-    public AssessmentSessionState State { get; private set; } = default!;
+    public AssessmentSessionState State { get; private set; }
     public Story CurrentStory { get; private set; } = default!;
     
     private readonly List<Appraiser> _appraisers;
@@ -41,13 +41,6 @@ public sealed class AssessmentSession
         return this;
     }
 
-    public AssessmentSession MoveToArchive()
-    {
-        State = AssessmentSessionState.Archived;
-
-        return this;
-    }
-
     public AssessmentSession ConnectModerator(AppraiserId id, string name)
     {
         if (id is null)
@@ -55,7 +48,7 @@ public sealed class AssessmentSession
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(name));
         
-        Moderator = Appraiser.Create(id, name, Id);
+        Moderator = Appraiser.Create(id, name);
         return ConnectAppraiser(Moderator);
     }
 
@@ -66,12 +59,22 @@ public sealed class AssessmentSession
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(name));
 
-        return ConnectAppraiser(Appraiser.Create(id, name, Id));
+        return ConnectAppraiser(Appraiser.Create(id, name));
     }
 
-    public AssessmentSession Next(Story story)
+    public AssessmentSession Next(string storyTitle)
     {
-        CurrentStory = story ?? throw new ArgumentNullException(nameof(story));
+        if (string.IsNullOrWhiteSpace(storyTitle))
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(storyTitle));
+
+        CurrentStory = Story.Create(storyTitle, _appraisers);
+
+        return this;
+    }
+
+    public AssessmentSession End()
+    {
+        CurrentStory = Story.Empty;
 
         return this;
     }

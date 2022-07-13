@@ -28,14 +28,11 @@ internal sealed class EndAssessmentSessionCommandHandler
         var assessmentSession = await _assessmentSessionRepository.FindByModerator(moderatorId, cancellationToken);
         
         if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException($"Не найдена активная сессия для модератора {moderatorId.Value}.");
+            throw new AppraiserException($"Не найдена активная сессия для модератора {command.ModeratorName}.");
         if (!assessmentSession.Moderator.Id.Equals(moderatorId))
-            throw new ApplicationException(
-                $"У модератора {command.ModeratorId} недостаточно прав для запуска сессии {assessmentSession.Id}.");
+            throw new ApplicationException($"У модератора {command.ModeratorName} недостаточно прав для запуска сессии {assessmentSession.Title}.");
 
-        assessmentSession.MoveToArchive();
-        
-        await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
+        await _assessmentSessionRepository.Remove(assessmentSession, cancellationToken);
 
         return new EndAssessmentSessionResult(assessmentSession.Title);
     }

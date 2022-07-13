@@ -25,16 +25,15 @@ internal sealed class AddStoryCommandHandler : IRequestHandler<AddStoryCommand, 
         var assessmentSession = await _assessmentSessionRepository.FindByModerator(moderatorId, cancellationToken);
         
         if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException("Не удалось обнаружить активную сессию.");
+            throw new AppraiserException($"Не удалось обнаружить активную сессию для модератора {command.ModeratorName}.");
         if (!assessmentSession.Moderator.Id.Equals(moderatorId))
-            throw new ApplicationException(
-                $"У модератора {command.ModeratorId} недостаточно прав для добавления задачи к сессии {assessmentSession.Id}.");
+            throw new ApplicationException($"У модератора {command.ModeratorName} недостаточно прав для добавления задачи к сессии {assessmentSession.Title}.");
 
-        assessmentSession.Next(Story.Create(command.Title));
+        assessmentSession.Next(command.Title);
 
         await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
 
-        var appraisers = assessmentSession.Appraisers.Select(a => a.Id.Value).ToArray();
-        return new AddStoryResult(assessmentSession.CurrentStory.Title, appraisers);
+        var appraiserIds = assessmentSession.Appraisers.Select(a => a.Id.Value).ToArray();
+        return new AddStoryResult(assessmentSession.Id.Value, assessmentSession.CurrentStory.Title, appraiserIds);
     }
 }

@@ -26,14 +26,14 @@ internal sealed class CommandFactory
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _commandList = new()
         {
-            ["/start"] = (CreateConnectAppraiserCommand, string.Empty),
-            ["/new"] = ((c, uId, uName) => new CreateAssessmentSessionCommand(uId, uName), "/new - создать сессию"),
-            ["/users"] = ((c, uId, uName) => new ShowAppraiserListCommand(uId), "/users - список пользователей"),
-            ["/add"] = ((c, uId, uName) => CreateAddStoryCommand(c, uId), "/add {task} - добавление задачи для оценки"),
-            ["/set"] = ((c, uId, uName) => CreateEstimateStoryCommand(c, uId), "/set{3} - задать оценку"),
-            ["/end"] = ((c, uId, uName) => new EndEstimateCommand(uId), "/end - завершение оценки"),
-            ["/exit"] = ((c, uId, uName) => new EndAssessmentSessionCommand(uId), "/exit - завершение сессии"),
-            ["/help"] = ((c, uId, uName) => CreateHelpCommand(), "/help - помощь")
+            [Commands.Start] = (CreateConnectAppraiserCommand, string.Empty),
+            [Commands.New] = ((c, uId, uName) => new CreateAssessmentSessionCommand(uId, uName), $"{Commands.New} - создать сессию"),
+            [Commands.Users] = ((c, uId, uName) => new ShowAppraiserListCommand(uId, uName), $"{Commands.Users} - список пользователей"),
+            [Commands.Add] = (CreateAddStoryCommand, $"{Commands.Add}{{task}} - добавление задачи для оценки"),
+            [Commands.Set] = (CreateEstimateStoryCommand, $"{Commands.Set}{{3}} - задать оценку"),
+            [Commands.End] = ((c, uId, uName) => new EndEstimateCommand(uId, uName), $"{Commands.End} - завершение оценки"),
+            [Commands.Exit] = ((c, uId, uName) => new EndAssessmentSessionCommand(uId, uName), $"{Commands.Exit} - завершение сессии"),
+            [Commands.Help] = ((c, uId, uName) => CreateHelpCommand(), string.Empty)
         };
     }
 
@@ -54,25 +54,22 @@ internal sealed class CommandFactory
         if (commandKey is not null)
             command = _commandList[commandKey].Action(commandText, userId, userName);
 
-        command ??= await FindDraftSession(commandText, userId, cancellationToken);
+        command ??= await FindDraftSession(commandText, userId, userName, cancellationToken);
         command ??= CreateErrorHandleCommand();
         
         return command;
     }
 
-    private AddStoryCommand? CreateAddStoryCommand(string commandText, long userId)
+    private AddStoryCommand CreateAddStoryCommand(string commandText, long userId, string userName)
     {
         if (string.IsNullOrWhiteSpace(commandText))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(commandText));
+        if (string.IsNullOrWhiteSpace(userName))
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(userName));
         
-        var commands = commandText.Split(' ');
-        var title = commands.Length > ParameterIndex
-            ? commands[ParameterIndex]
-            : string.Empty;
+        var title = commandText.Replace(Commands.Add, string.Empty);
 
-        return !string.IsNullOrWhiteSpace(title)
-            ? new AddStoryCommand(userId, title)
-            : null;
+        return new AddStoryCommand(userId, userName, title);
     }
 
     public IBaseRequest CreateErrorHandleCommand()
@@ -91,20 +88,22 @@ internal sealed class CommandFactory
         return new SendMessageCommand(messageBuilder.ToString());
     }
 
-    private IBaseRequest CreateEstimateStoryCommand(string commandText, long userId)
+    private IBaseRequest CreateEstimateStoryCommand(string commandText, long userId, string userName)
     {
         if (string.IsNullOrWhiteSpace(commandText))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(commandText));
+        if (string.IsNullOrWhiteSpace(userName))
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(userName));
 
         const int estimateIndex = 4;
 
         if (commandText.Length <= estimateIndex)
-            return new EstimateStoryCommand(userId, Value: null);
+            return new EstimateStoryCommand(userId, userName, Value: null);
 
         var parameter = commandText.Substring(estimateIndex, commandText.Length - estimateIndex);
 
         return _targets.Contains(parameter)
-            ? new EstimateStoryCommand(userId, int.Parse(parameter))
+            ? new EstimateStoryCommand(userId, userName, int.Parse(parameter))
             : new SendMessageCommand($"Недопустимая оценка {parameter}. Список оценок: {string.Join(", ", _targets)}");
     }
 
@@ -128,10 +127,13 @@ internal sealed class CommandFactory
     private async Task<IBaseRequest?> FindDraftSession(
         string commandText,
         long userId,
+        string userName,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(commandText))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(commandText));
+        if (string.IsNullOrWhiteSpace(userName))
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(userName));
         
         using var scope = _serviceProvider.CreateScope();
         var assessmentSessionRepository = scope.ServiceProvider.GetRequiredService<IAssessmentSessionRepository>();
@@ -139,7 +141,7 @@ internal sealed class CommandFactory
         var assessmentSession = await assessmentSessionRepository.FindByModerator(new AppraiserId(userId), cancellationToken);
 
         return assessmentSession?.State == AssessmentSessionState.Draft
-            ? new ActivateAssessmentSessionCommand(userId, commandText)
+            ? new ActivateAssessmentSessionCommand(userId, userName, commandText)
             : null;
     }
 }

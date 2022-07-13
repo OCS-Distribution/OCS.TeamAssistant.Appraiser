@@ -24,22 +24,22 @@ internal sealed class EndEstimateCommandHandler : IRequestHandler<EndEstimateCom
         var assessmentSession = await _assessmentSessionRepository.FindByModerator(
             new AppraiserId(command.ModeratorId),
             cancellationToken);
-
         if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException("Не удалось обнаружить активную сессию.");
-        
-        var itemsLookup = assessmentSession.CurrentStory.Assessments
-            .GroupBy(a => new { a.Appraiser.Id })
-            .Select(a => a.OrderBy(i => i.Created).Last())
-            .ToDictionary(a => a.Appraiser.Id);
+            throw new AppraiserException(
+                $"Не удалось обнаружить активную сессию для модератора {command.ModeratorName}.");
 
-        var items = assessmentSession.Appraisers
-            .Select(a => new EstimateItem(
-                a.Id.Value,
-                a.Name,
-                itemsLookup.TryGetValue(a.Id, out var item) ? item.Value?.ToString() ?? "?" : "-"))
+        var storyTitle = assessmentSession.CurrentStory.Title;
+        var items = assessmentSession.CurrentStory.StoryForEstimates
+            .Select(a => new EstimateResult(
+                a.Appraiser.Id.Value,
+                a.Appraiser.Name,
+                a.StoryExternalId,
+                a.GetValue(),
+                a.GetDisplayValue()))
             .ToArray();
         
-        return new EndEstimateResult(items);
+        assessmentSession.End();
+        
+        return new EndEstimateResult(storyTitle, items);
     }
 }
