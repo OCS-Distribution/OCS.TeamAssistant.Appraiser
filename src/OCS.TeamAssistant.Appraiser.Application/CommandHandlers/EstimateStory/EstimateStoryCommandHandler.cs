@@ -10,15 +10,11 @@ namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.EstimateStory;
 internal sealed class EstimateStoryCommandHandler : IRequestHandler<EstimateStoryCommand, EstimateStoryResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
-    private readonly IReportBuilder _reportBuilder;
 
-    public EstimateStoryCommandHandler(
-        IAssessmentSessionRepository assessmentSessionRepository,
-        IReportBuilder reportBuilder)
+    public EstimateStoryCommandHandler(IAssessmentSessionRepository assessmentSessionRepository)
     {
         _assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
-        _reportBuilder = reportBuilder ?? throw new ArgumentNullException(nameof(reportBuilder));
     }
 
     public async Task<EstimateStoryResult> Handle(EstimateStoryCommand command, CancellationToken cancellationToken)
@@ -35,12 +31,14 @@ internal sealed class EstimateStoryCommandHandler : IRequestHandler<EstimateStor
 
         if (assessmentSession.CurrentStory.EstimateEnded())
             throw new AppraiserException(
-                $"Ваша оценка не принята. Оценка задачи {assessmentSession.CurrentStory.Title} закончена.");
+                $"Ваша оценка не принята. Оценка задачи \"{assessmentSession.CurrentStory.Title}\" закончена.");
 
         var appraiser = assessmentSession.Appraisers.Single(a => a.Id == appraiserId);
         assessmentSession.CurrentStory.Estimate(appraiser, command.Value);
         
-        var items = _reportBuilder.Build(assessmentSession.CurrentStory);
+        var items = assessmentSession.CurrentStory.StoryForEstimates
+            .Select(s => new EstimateItem(s.Appraiser.Id.Value, s.Appraiser.Name, s.StoryExternalId, s.Value))
+            .ToArray();
 
         await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
         

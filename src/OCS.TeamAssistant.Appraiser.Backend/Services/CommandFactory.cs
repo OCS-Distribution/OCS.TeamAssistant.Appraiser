@@ -4,6 +4,7 @@ using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ActivateAssessm
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.AddTask;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ConnectAppraiser;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.CreateAssessmentSession;
+using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.DisconnectAppraiser;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndAssessmentSession;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndEstimate;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EstimateStory;
@@ -19,44 +20,46 @@ namespace OCS.TeamAssistant.Appraiser.Backend.Services;
 internal sealed class CommandFactory
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly Dictionary<string, (Func<string, long, long, string, IBaseRequest?> Func, string Help)> _commands;
+    private readonly Dictionary<string, Func<string, long, long, string, IBaseRequest?>> _commandList;
+    private readonly IReadOnlyCollection<(string Command, string Text)> _commandHelp;
     private readonly HashSet<string> _targets;
 
     public CommandFactory(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-        
-        _commands = new()
+
+        _commandHelp = new []
         {
-            [Commands.Start] = ((c, cId, uId, uName) => CreateConnectAppraiserCommand(c, uId, uName), string.Empty),
-            [Commands.New] = (
-                (c, cId, uId, uName) => new CreateAssessmentSessionCommand(cId, uId, uName),
-                $"{Commands.New} - создать сессию"),
-            [Commands.Users] = (
-                (c, cId, uId, uName) => new ShowAppraiserListCommand(uId, uName),
-                $"{Commands.Users} - список пользователей"),
-            [Commands.Add] = (
-                (c, cId, uId, uName) => CreateAddStoryCommand(c, uId, uName),
-                $"{Commands.Add}{{task}} - добавление задачи для оценки"),
-            [Commands.Set] = (
-                (c, cId, uId, uName) => CreateEstimateStoryCommand(c, uId, uName),
-                $"{Commands.Set}{{3}} - задать оценку"),
-            [Commands.End] = (
-                (c, cId, uId, uName) => new EndEstimateCommand(uId, uName),
-                $"{Commands.End} - завершение оценки"),
-            [Commands.Reset] = (
-                (c, cId, uId, uName) => new ResetEstimateCommand(uId, uName),
-                $"{Commands.Reset} - перезапустить оценку задачи"),
-            [Commands.Exit] = (
-                (c, cId, uId, uName) => new EndAssessmentSessionCommand(uId, uName),
-                $"{Commands.Exit} - завершение сессии"),
-            [Commands.Help] = ((c, cId, uId, uName) => CreateHelpCommand(), string.Empty)
+            (Commands.Disconnect, "{0} - отключиться от сессии оценки"),
+            (Commands.New, "{0} - создать сессию"),
+            (Commands.Users, "{0} - список пользователей"),
+            (Commands.Add, "{0}{{task}} - добавление задачи для оценки"),
+            (Commands.Set, "{0}{{3}} - задать оценку"),
+            (Commands.NoIdea, "{0} - без понятия"),
+            (Commands.End, "{0} - завершение оценки"),
+            (Commands.Reset, "{0} - перезапустить оценку задачи"),
+            (Commands.Exit, "{0} - завершение сессии")
         };
         
-        _targets = new HashSet<string>(AssessmentValueRules.GetAssessments);
+        _commandList = new()
+        {
+            [Commands.Start] = (c, cId, uId, uName) => CreateConnectAppraiserCommand(c, uId, uName),
+            [Commands.Disconnect] = (c, cId, uId, uName) => new DisconnectAppraiserCommand(uId, uName),
+            [Commands.New] = (c, cId, uId, uName) => new CreateAssessmentSessionCommand(cId, uId, uName),
+            [Commands.Users] = (c, cId, uId, uName) => new ShowAppraiserListCommand(uId, uName),
+            [Commands.Add] = (c, cId, uId, uName) => CreateAddStoryCommand(c, uId, uName),
+            [Commands.Set] = (c, cId, uId, uName) => CreateEstimateStoryCommand(c, uId, uName),
+            [Commands.NoIdea] = (c, cId, uId, uName) => new EstimateStoryCommand(uId, uName, Value: null),
+            [Commands.End] = (c, cId, uId, uName) => new EndEstimateCommand(uId, uName),
+            [Commands.Reset] = (c, cId, uId, uName) => new ResetEstimateCommand(uId, uName),
+            [Commands.Exit] = (c, cId, uId, uName) => new EndAssessmentSessionCommand(uId, uName),
+            [Commands.Help] = (c, cId, uId, uName) => CreateHelpCommand()
+        };
+        
+        _targets = new HashSet<string>(AssessmentValueRules.GetAssessments.Select(a => ((int)a).ToString()));
     }
 
-    public async Task<IBaseRequest> Create(
+    public async Task<IBaseRequest?> Create(
         string commandText,
         long chatId,
         long userId,
@@ -70,13 +73,14 @@ internal sealed class CommandFactory
         
         IBaseRequest? command = null;
 
-        var commandKey = _commands.Keys.FirstOrDefault(commandText.StartsWith);
+        var commandKey = _commandList.Keys
+            .FirstOrDefault(k => commandText.StartsWith(k, StringComparison.InvariantCultureIgnoreCase));
+        
         if (commandKey is not null)
-            command = _commands[commandKey].Func(commandText, chatId, userId, userName);
+            command = _commandList[commandKey](commandText, chatId, userId, userName);
 
         command ??= await FindDraftSession(commandText, userId, userName, cancellationToken);
-        command ??= CreateErrorHandleCommand();
-        
+
         return command;
     }
 
@@ -92,18 +96,12 @@ internal sealed class CommandFactory
         return new AddStoryCommand(userId, userName, title);
     }
 
-    public IBaseRequest CreateErrorHandleCommand()
-    {
-        return new SendMessageCommand("Команда введена неверно. Проверьте команду и попробуйте еще раз.");
-    }
-
     private SendMessageCommand CreateHelpCommand()
     {
         var messageBuilder = new StringBuilder();
 
-        foreach (var command in _commands.Values)
-            if (!string.IsNullOrWhiteSpace(command.Help))
-                messageBuilder.AppendLine(command.Help);
+        foreach (var item in _commandHelp)
+            messageBuilder.AppendLine(string.Format(item.Text, item.Command));
 
         return new SendMessageCommand(messageBuilder.ToString());
     }
@@ -115,11 +113,7 @@ internal sealed class CommandFactory
         if (string.IsNullOrWhiteSpace(userName))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(userName));
 
-        const int estimateIndex = 4;
-
-        if (commandText.Length <= estimateIndex)
-            return new EstimateStoryCommand(userId, userName, Value: null);
-
+        const int estimateIndex = 3;
         var parameter = commandText.Substring(estimateIndex, commandText.Length - estimateIndex);
 
         return _targets.Contains(parameter)
@@ -127,7 +121,7 @@ internal sealed class CommandFactory
             : new SendMessageCommand($"Недопустимая оценка {parameter}. Список оценок: {string.Join(", ", _targets)}");
     }
 
-    private ConnectAppraiserCommand? CreateConnectAppraiserCommand(string commandText, long userId, string userName)
+    private IBaseRequest CreateConnectAppraiserCommand(string commandText, long userId, string userName)
     {
         if (string.IsNullOrWhiteSpace(commandText))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(commandText));
@@ -140,7 +134,7 @@ internal sealed class CommandFactory
 
         return !string.IsNullOrWhiteSpace(userName) && Guid.TryParse(assessmentSessionId, out var value)
             ? new ConnectAppraiserCommand(value, userId, userName)
-            : null;
+            : new SendMessageCommand("Команда введена неверно. Проверьте команду и попробуйте еще раз.");
     }
 
     private async Task<IBaseRequest?> FindDraftSession(

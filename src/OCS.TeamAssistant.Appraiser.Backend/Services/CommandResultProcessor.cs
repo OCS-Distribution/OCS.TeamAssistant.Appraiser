@@ -7,6 +7,7 @@ using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.AddTask;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.AddTaskForEstimate;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ConnectAppraiser;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.CreateAssessmentSession;
+using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.DisconnectAppraiser;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndAssessmentSession;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndEstimate;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.SendMessage;
@@ -44,7 +45,7 @@ internal sealed class CommandResultProcessor
                 activateAssessmentSessionResult.Id);
 
             yield return Notification.Create(
-                $"Для подключения к \"{activateAssessmentSessionResult.Title}\" перейдите по ссылке {linkForConnect}",
+                $"Для подключения к \"{activateAssessmentSessionResult.Title}\" перейдите по ссылке и нажмите start {linkForConnect}",
                 chatId);
         }
 
@@ -60,6 +61,18 @@ internal sealed class CommandResultProcessor
                     connectAppraiserResult.ChatId);
         }
 
+        if (commandResult is DisconnectAppraiserResult disconnectAppraiserResult)
+        {
+            yield return Notification.Create(
+                $"Успешное отключение от сессии \"{disconnectAppraiserResult.AssessmentSessionTitle}\".",
+                chatId);
+
+            if (disconnectAppraiserResult.ChatId != chatId)
+                yield return Notification.Create(
+                    $"Участник {disconnectAppraiserResult.AppraiserName} отключен от сессии {disconnectAppraiserResult.AssessmentSessionTitle}.",
+                    disconnectAppraiserResult.ChatId);
+        }
+
         if (commandResult is ShowAppraiserListResult showAppraiserListResult)
         {
             var messageBuilder = new StringBuilder();
@@ -69,7 +82,6 @@ internal sealed class CommandResultProcessor
 
             yield return Notification.Create(messageBuilder.ToString(), chatId);
         }
-
 
         if (commandResult is AddStoryResult addStoryResult)
         {
@@ -81,20 +93,31 @@ internal sealed class CommandResultProcessor
             yield return Notification.Create(
                 messageBuilder.ToString(),
                 addStoryResult.AppraiserIds,
-                (uId, sId, t) => SetStoryId(addStoryResult.AssessmentSessionId, uId, sId, t));
+                (cId, uId, mId, t) => SetStoryId(addStoryResult.AssessmentSessionId, cId, uId, mId, t));
         }
 
         if (commandResult is EndEstimateResult showResultsResult)
+        {
+            yield return Build(estimateEnded: false, showResultsResult.StoryTitle, showResultsResult.Items);
             yield return Build(estimateEnded: true, showResultsResult.StoryTitle, showResultsResult.Items);
+        }
 
         if (commandResult is EstimateStoryResult estimateStoryResult)
-            yield return Build(estimateStoryResult.EstimateEnded, estimateStoryResult.StoryTitle, estimateStoryResult.Items);
+        {
+            yield return Build(estimateEnded: false, estimateStoryResult.StoryTitle, estimateStoryResult.Items);
+            if (estimateStoryResult.EstimateEnded)
+                yield return Build(estimateEnded: true, estimateStoryResult.StoryTitle, estimateStoryResult.Items);
+        }
 
         if (commandResult is EndAssessmentSessionResult endAssessmentSessionResult)
+        {
+            var targets = endAssessmentSessionResult.AppraiserIds.Append(chatId).Distinct().ToArray();
+            
             yield return Notification.Create(
                 $"Сессия оценки \"{endAssessmentSessionResult.AssessmentSessionTitle}\" завершена.",
-                chatId);
-
+                targets);
+        }
+        
         if (commandResult is SendMessageResult sendMessageResult)
             yield return Notification.Create(sendMessageResult.Text, chatId);
 
@@ -114,22 +137,20 @@ internal sealed class CommandResultProcessor
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(storyTitle));
         if (items is null)
             throw new ArgumentNullException(nameof(items));
-        
-        var targetMessages = items.Select(i => (i.AppraiserId, i.StoryExternalId)).ToArray();
-                
+
         var messageBuilder = new StringBuilder();
         messageBuilder.AppendLine(estimateEnded
             ? $"Завершена оценка задачи \"{storyTitle}\"."
             : $"Задача для оценки \"{storyTitle}\".");
-
+        
         foreach (var item in items)
-            messageBuilder.AppendLine($"{item.AppraiserName} {item.DisplayValue}");
+            messageBuilder.AppendLine($"{item.AppraiserName} {DisplayValue(item.Value, estimateEnded)}");
         
         if (estimateEnded)
         {
             var values = items
-                .Where(i => i.Value.HasValue)
-                .Select(i => i.Value!.Value)
+                .Where(i => AssessmentValueRules.GetAssessments.Contains(i.Value))
+                .Select(i => (int)i.Value)
                 .ToArray();
             
             if (values.Any())
@@ -138,7 +159,22 @@ internal sealed class CommandResultProcessor
         else
             AddAssessments(messageBuilder);
 
-        return Notification.Edit(messageBuilder.ToString(), targetMessages);
+        return estimateEnded
+            ? Notification.Create(messageBuilder.ToString(), items.Select(i => i.AppraiserId).ToArray())
+            : Notification.Edit(messageBuilder.ToString(), items.Select(i => (i.AppraiserId, i.StoryExternalId)).ToArray());
+    }
+    
+    private string DisplayValue(AssessmentValue value, bool estimateEnded)
+    {
+        if (estimateEnded)
+            return value switch
+            {
+                AssessmentValue.Unknown => "?",
+                AssessmentValue.None => "-",
+                _ => ((int)value).ToString()
+            };
+
+        return value == AssessmentValue.None ? string.Empty : "+";
     }
     
     private void AddAssessments(StringBuilder messageBuilder)
@@ -149,14 +185,15 @@ internal sealed class CommandResultProcessor
         messageBuilder.Append("Выберите одну из оценок:");
         
         foreach (var assessment in AssessmentValueRules.GetAssessments)
-            messageBuilder.Append($"/set{assessment} ");
+            messageBuilder.Append($" /{assessment.ToString().ToLower()}");
         
-        messageBuilder.Append("/set");
+        messageBuilder.Append(" /noidea");
     }
 
     private async Task SetStoryId(
         Guid assessmentSessionId,
         long chatId,
+        string userName,
         int messageId,
         CancellationToken cancellationToken)
     {
@@ -166,6 +203,7 @@ internal sealed class CommandResultProcessor
         await mediatr.Send(new AddTaskForEstimateCommand(
             assessmentSessionId,
             chatId,
+            userName,
             messageId), cancellationToken);
     }
 }

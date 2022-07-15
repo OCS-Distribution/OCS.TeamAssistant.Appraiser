@@ -27,7 +27,7 @@ internal sealed class ConnectAppraiserCommandHandler : IRequestHandler<ConnectAp
         var assessmentSession = await _assessmentSessionRepository.Find(assessmentSessionId, cancellationToken);
 
         if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException($"Сессия {assessmentSessionId.Value} не найдена. Обратитесь к модератору.");
+            throw new AppraiserException($"Сессия \"{assessmentSessionId.Value}\" не найдена. Обратитесь к модератору.");
         
         assessmentSession.ConnectAppraiser(new AppraiserId(command.AppraiserId), command.AppraiserName);
         

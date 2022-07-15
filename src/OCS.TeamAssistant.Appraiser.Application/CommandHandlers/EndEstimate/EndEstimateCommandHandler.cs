@@ -10,15 +10,11 @@ namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.EndEstimate;
 internal sealed class EndEstimateCommandHandler : IRequestHandler<EndEstimateCommand, EndEstimateResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
-    private readonly IReportBuilder _reportBuilder;
 
-    public EndEstimateCommandHandler(
-        IAssessmentSessionRepository assessmentSessionRepository,
-        IReportBuilder reportBuilder)
+    public EndEstimateCommandHandler(IAssessmentSessionRepository assessmentSessionRepository)
     {
         _assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
-        _reportBuilder = reportBuilder ?? throw new ArgumentNullException(nameof(reportBuilder));
     }
     
     public async Task<EndEstimateResult> Handle(EndEstimateCommand command, CancellationToken cancellationToken)
@@ -34,12 +30,15 @@ internal sealed class EndEstimateCommandHandler : IRequestHandler<EndEstimateCom
 
         var currentStory = assessmentSession.CurrentStory;
         
-        assessmentSession
-            .AsModerator(moderatorId)
-            .MoveToComplete();
+        assessmentSession.AsModerator(moderatorId);
+        currentStory.MoveToComplete();
+
+        var items = currentStory.StoryForEstimates
+            .Select(s => new EstimateItem(s.Appraiser.Id.Value, s.Appraiser.Name, s.StoryExternalId, s.Value))
+            .ToArray();
         
-        var items = _reportBuilder.Build(currentStory.MoveToComplete());
-        
+        assessmentSession.MoveToComplete();
+
         return new EndEstimateResult(currentStory.Title, items);
     }
 }

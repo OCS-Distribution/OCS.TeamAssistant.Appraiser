@@ -80,7 +80,7 @@ public sealed class AssessmentSession
         if (appraiserId is null)
             throw new ArgumentNullException(nameof(appraiserId));
         if (!Moderator.Id.Equals(appraiserId))
-            throw new AppraiserException($"Недостаточно прав для добавления задачи к сессии {Title}.");
+            throw new AppraiserException($"Недостаточно прав для добавления задачи к сессии \"{Title}\".");
 
         return this;
     }
@@ -92,13 +92,31 @@ public sealed class AssessmentSession
         return this;
     }
 
+    public AssessmentSession DisconnectAppraiser(AppraiserId appraiserId)
+    {
+        if (appraiserId is null)
+            throw new ArgumentNullException(nameof(appraiserId));
+
+        var appraiser = _appraisers.SingleOrDefault(a => a.Id == appraiserId);
+
+        if (appraiser is null)
+            throw new AppraiserException($"Отклучение завершено с ошибкой. Пользователь не подключен к сессии \"{Title}\".");
+
+        if (Moderator.Id == appraiser.Id)
+            throw new AppraiserException($"Модератор не может быть отключен от сессии \"{Title}\". Необходимо завершить сессию.");
+        
+        _appraisers.Remove(appraiser);
+        
+        return this;
+    }
+
     private AssessmentSession ConnectAppraiser(Appraiser appraiser)
     {
         if (appraiser is null)
             throw new ArgumentNullException(nameof(appraiser));
 
         if (_appraisers.Any(a => a.Id == appraiser.Id))
-            throw new AppraiserException($"Вы уже подключен к сессии {Title}.");
+            throw new AppraiserException($"Вы уже подключен к сессии \"{Title}\".");
         
         _appraisers.Add(appraiser);
 

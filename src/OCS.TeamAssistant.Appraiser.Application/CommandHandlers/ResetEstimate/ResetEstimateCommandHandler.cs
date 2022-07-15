@@ -10,15 +10,11 @@ namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.ResetEstimate;
 internal sealed class ResetEstimateCommandHandler : IRequestHandler<ResetEstimateCommand, ResetEstimateResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
-    private readonly IReportBuilder _reportBuilder;
 
-    public ResetEstimateCommandHandler(
-        IAssessmentSessionRepository assessmentSessionRepository,
-        IReportBuilder reportBuilder)
+    public ResetEstimateCommandHandler(IAssessmentSessionRepository assessmentSessionRepository)
     {
         _assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
-        _reportBuilder = reportBuilder ?? throw new ArgumentNullException(nameof(reportBuilder));
     }
     
     public async Task<ResetEstimateResult> Handle(ResetEstimateCommand command, CancellationToken cancellationToken)
@@ -40,7 +36,10 @@ internal sealed class ResetEstimateCommandHandler : IRequestHandler<ResetEstimat
         await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
 
         var appraiserIds = assessmentSession.Appraisers.Select(a => a.Id.Value).ToArray();
-        var items = _reportBuilder.Build(assessmentSession.CurrentStory);
+        var items = assessmentSession.CurrentStory.StoryForEstimates
+            .Select(s => new EstimateItem(s.Appraiser.Id.Value, s.Appraiser.Name, s.StoryExternalId, s.Value))
+            .ToArray();
+        
         return new ResetEstimateResult(assessmentSession.CurrentStory.Title, appraiserIds, items);
     }
 }

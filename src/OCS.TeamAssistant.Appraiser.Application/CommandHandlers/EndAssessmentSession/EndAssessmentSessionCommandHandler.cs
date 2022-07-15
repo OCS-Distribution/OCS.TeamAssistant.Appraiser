@@ -36,6 +36,7 @@ internal sealed class EndAssessmentSessionCommandHandler
 
         await _assessmentSessionRepository.Remove(assessmentSession, cancellationToken);
 
-        return new EndAssessmentSessionResult(assessmentSession.Title);
+        var appraiserIds = assessmentSession.Appraisers.Select(a => a.Id.Value).ToArray();
+        return new EndAssessmentSessionResult(assessmentSession.Title, appraiserIds);
     }
 }
