@@ -1,3 +1,5 @@
+using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
+
 namespace OCS.TeamAssistant.Appraiser.Domain;
 
 public sealed class StoryForEstimate
@@ -39,4 +41,6 @@ public sealed class StoryForEstimate
         
         return (int)Value;
     }
+
+    internal void Reset() => Value = AssessmentValue.None;
 }

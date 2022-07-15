@@ -8,11 +8,13 @@ using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.AddTaskForEstim
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ConnectAppraiser;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.CreateAssessmentSession;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndAssessmentSession;
+using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndEstimate;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.SendMessage;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ShowAppraiserList;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndEstimates;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EstimateStory;
+using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ResetEstimate;
 using OCS.TeamAssistant.Appraiser.Backend.Options;
+using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
 
 namespace OCS.TeamAssistant.Appraiser.Backend.Services;
 
@@ -51,6 +53,7 @@ internal sealed class CommandResultProcessor
             yield return Notification.Create(
                 $"Успешное подключение к сессии оценки \"{connectAppraiserResult.AssessmentSessionTitle}\".",
                 chatId);
+            
             if (connectAppraiserResult.ChatId != chatId)
                 yield return Notification.Create(
                     $"Участник {connectAppraiserResult.AppraiserName} подключен к сессии \"{connectAppraiserResult.AssessmentSessionTitle}\".",
@@ -58,15 +61,28 @@ internal sealed class CommandResultProcessor
         }
 
         if (commandResult is ShowAppraiserListResult showAppraiserListResult)
-            yield return Notification.Create(
-                $"К сессии подключены: {string.Join(", ", showAppraiserListResult.Appraisers)}",
-                chatId);
+        {
+            var messageBuilder = new StringBuilder();
+            messageBuilder.AppendLine("К сессии подключены:");
+            foreach (var appraiser in showAppraiserListResult.Appraisers)
+                messageBuilder.AppendLine(appraiser);
+
+            yield return Notification.Create(messageBuilder.ToString(), chatId);
+        }
+
 
         if (commandResult is AddStoryResult addStoryResult)
+        {
+            var messageBuilder = new StringBuilder();
+            messageBuilder.AppendLine($"Необходимо оценить задачу \"{addStoryResult.Title}\".");
+
+            AddAssessments(messageBuilder);
+
             yield return Notification.Create(
-                $"Необходимо оценить задачу \"{addStoryResult.Title}\". Для оценки начните вводить команду /set.",
+                messageBuilder.ToString(),
                 addStoryResult.AppraiserIds,
                 (uId, sId, t) => SetStoryId(addStoryResult.AssessmentSessionId, uId, sId, t));
+        }
 
         if (commandResult is EndEstimateResult showResultsResult)
             yield return Build(estimateEnded: true, showResultsResult.StoryTitle, showResultsResult.Items);
@@ -81,6 +97,15 @@ internal sealed class CommandResultProcessor
 
         if (commandResult is SendMessageResult sendMessageResult)
             yield return Notification.Create(sendMessageResult.Text, chatId);
+
+        if (commandResult is ResetEstimateResult resetEstimateResult)
+        {
+            yield return Notification.Create(
+                $"Запущена повторная оценка задачи \"{resetEstimateResult.StoryTitle}\".",
+                resetEstimateResult.AppraiserIds);
+
+            yield return Build(estimateEnded: false, resetEstimateResult.StoryTitle, resetEstimateResult.Items);
+        }
     }
 
     private Notification Build(bool estimateEnded, string storyTitle, IReadOnlyCollection<EstimateItem> items)
@@ -98,16 +123,35 @@ internal sealed class CommandResultProcessor
             : $"Задача для оценки \"{storyTitle}\".");
 
         foreach (var item in items)
-            messageBuilder.AppendLine($"{item.AppraiserName}: {item.DisplayValue}");
+            messageBuilder.AppendLine($"{item.AppraiserName} {item.DisplayValue}");
         
         if (estimateEnded)
         {
-            var values = items.Where(i => i.Value.HasValue).Select(i => i.Value!.Value).ToArray();
+            var values = items
+                .Where(i => i.Value.HasValue)
+                .Select(i => i.Value!.Value)
+                .ToArray();
+            
             if (values.Any())
                 messageBuilder.AppendLine($"Среднее значение: {values.Sum() / (decimal)values.Length:.##} SP");
         }
-        
+        else
+            AddAssessments(messageBuilder);
+
         return Notification.Edit(messageBuilder.ToString(), targetMessages);
+    }
+    
+    private void AddAssessments(StringBuilder messageBuilder)
+    {
+        if (messageBuilder is null)
+            throw new ArgumentNullException(nameof(messageBuilder));
+
+        messageBuilder.Append("Выберите одну из оценок:");
+        
+        foreach (var assessment in AssessmentValueRules.GetAssessments)
+            messageBuilder.Append($"/set{assessment} ");
+        
+        messageBuilder.Append("/set");
     }
 
     private async Task SetStoryId(

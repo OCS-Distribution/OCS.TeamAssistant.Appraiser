@@ -1,16 +1,17 @@
 using System.Text;
 using MediatR;
-using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ActivateAssessmentSession;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.AddTask;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ConnectAppraiser;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.CreateAssessmentSession;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndAssessmentSession;
+using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndEstimate;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EstimateStory;
+using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ResetEstimate;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.SendMessage;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ShowAppraiserList;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndEstimates;
 using OCS.TeamAssistant.Appraiser.Domain;
+using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Backend.Services;
@@ -43,16 +44,16 @@ internal sealed class CommandFactory
             [Commands.End] = (
                 (c, cId, uId, uName) => new EndEstimateCommand(uId, uName),
                 $"{Commands.End} - завершение оценки"),
+            [Commands.Reset] = (
+                (c, cId, uId, uName) => new ResetEstimateCommand(uId, uName),
+                $"{Commands.Reset} - перезапустить оценку задачи"),
             [Commands.Exit] = (
                 (c, cId, uId, uName) => new EndAssessmentSessionCommand(uId, uName),
                 $"{Commands.Exit} - завершение сессии"),
             [Commands.Help] = ((c, cId, uId, uName) => CreateHelpCommand(), string.Empty)
         };
         
-        var values = Enum.GetValues<AssessmentValue>()
-            .Where(i => i > 0)
-            .Select(i => ((int)i).ToString());
-        _targets = new HashSet<string>(values);
+        _targets = new HashSet<string>(AssessmentValueRules.GetAssessments);
     }
 
     public async Task<IBaseRequest> Create(
@@ -156,7 +157,7 @@ internal sealed class CommandFactory
         using var scope = _serviceProvider.CreateScope();
         var assessmentSessionRepository = scope.ServiceProvider.GetRequiredService<IAssessmentSessionRepository>();
 
-        var assessmentSession = await assessmentSessionRepository.FindByModerator(
+        var assessmentSession = await assessmentSessionRepository.Find(
             new AppraiserId(userId),
             cancellationToken);
 

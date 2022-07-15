@@ -8,6 +8,7 @@ public static class Commands
     public const string Add = "/add ";
     public const string Set = "/set";
     public const string End = "/end";
+    public const string Reset = "/reset";
     public const string Exit = "/exit";
     public const string Help = "/help";
 }

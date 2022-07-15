@@ -27,11 +27,15 @@ internal sealed class EstimateStoryCommandHandler : IRequestHandler<EstimateStor
             throw new ArgumentNullException(nameof(command));
 
         var appraiserId = new AppraiserId(command.AppraiserId);
-        var assessmentSession = await _assessmentSessionRepository.GetByAppraiser(appraiserId, cancellationToken);
+        var assessmentSession = await _assessmentSessionRepository.Find(appraiserId, cancellationToken);
         
         if (assessmentSession?.State != AssessmentSessionState.Active)
             throw new AppraiserException(
                 $"Не удалось найти активную сессию для участника {command.AppraiserName}. Обратитесь к модератору.");
+
+        if (assessmentSession.CurrentStory.EstimateEnded())
+            throw new AppraiserException(
+                $"Ваша оценка не принята. Оценка задачи {assessmentSession.CurrentStory.Title} закончена.");
 
         var appraiser = assessmentSession.Appraisers.Single(a => a.Id == appraiserId);
         assessmentSession.CurrentStory.Estimate(appraiser, command.Value);

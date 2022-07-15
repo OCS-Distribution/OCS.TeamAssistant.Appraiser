@@ -1,5 +1,4 @@
 using MediatR;
-using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndAssessmentSession;
 using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
@@ -26,12 +25,14 @@ internal sealed class EndAssessmentSessionCommandHandler
             throw new ArgumentNullException(nameof(command));
 
         var moderatorId = new AppraiserId(command.ModeratorId);
-        var assessmentSession = await _assessmentSessionRepository.FindByModerator(moderatorId, cancellationToken);
+        var assessmentSession = await _assessmentSessionRepository.Find(moderatorId, cancellationToken);
         
         if (assessmentSession?.State != AssessmentSessionState.Active)
             throw new AppraiserException($"Не найдена активная сессия для модератора {command.ModeratorName}.");
-        if (!assessmentSession.Moderator.Id.Equals(moderatorId))
-            throw new AppraiserException($"У модератора {command.ModeratorName} недостаточно прав для запуска сессии {assessmentSession.Title}.");
+
+        assessmentSession
+            .AsModerator(moderatorId)
+            .MoveToComplete();
 
         await _assessmentSessionRepository.Remove(assessmentSession, cancellationToken);
 

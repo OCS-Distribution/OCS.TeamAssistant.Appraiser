@@ -1,5 +1,4 @@
 using MediatR;
-using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ConnectAppraiser;
 using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
@@ -25,7 +24,7 @@ internal sealed class ConnectAppraiserCommandHandler : IRequestHandler<ConnectAp
             throw new ArgumentNullException(nameof(command));
 
         var assessmentSessionId = new AssessmentSessionId(command.AssessmentSessionId);
-        var assessmentSession = await _assessmentSessionRepository.FindById(assessmentSessionId, cancellationToken);
+        var assessmentSession = await _assessmentSessionRepository.Find(assessmentSessionId, cancellationToken);
 
         if (assessmentSession?.State != AssessmentSessionState.Active)
             throw new AppraiserException($"Сессия {assessmentSessionId.Value} не найдена. Обратитесь к модератору.");

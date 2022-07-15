@@ -65,7 +65,7 @@ public sealed class AssessmentSession
         return ConnectAppraiser(Appraiser.Create(id, name));
     }
 
-    public AssessmentSession Next(string storyTitle)
+    public AssessmentSession MoveToNext(string storyTitle)
     {
         if (string.IsNullOrWhiteSpace(storyTitle))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(storyTitle));
@@ -75,7 +75,17 @@ public sealed class AssessmentSession
         return this;
     }
 
-    public AssessmentSession End()
+    public AssessmentSession AsModerator(AppraiserId appraiserId)
+    {
+        if (appraiserId is null)
+            throw new ArgumentNullException(nameof(appraiserId));
+        if (!Moderator.Id.Equals(appraiserId))
+            throw new AppraiserException($"Недостаточно прав для добавления задачи к сессии {Title}.");
+
+        return this;
+    }
+
+    public AssessmentSession MoveToComplete()
     {
         CurrentStory = Story.Empty;
 
