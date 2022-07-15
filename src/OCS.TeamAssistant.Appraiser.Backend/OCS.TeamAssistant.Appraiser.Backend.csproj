@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Content Update="appsettings.Development.json">
+        <DependentUpon>appsettings.json</DependentUpon>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\OCS.TeamAssistant.Appraiser.Application\OCS.TeamAssistant.Appraiser.Application.csproj" />
+      <ProjectReference Include="..\OCS.TeamAssistant.Appraiser.DataAccess.InMemory\OCS.TeamAssistant.Appraiser.DataAccess.InMemory.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="10.0.1" />
+      <PackageReference Include="Telegram.Bot" Version="18.0.0" />
+    </ItemGroup>
+
+</Project>
