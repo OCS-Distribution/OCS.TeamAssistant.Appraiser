@@ -58,4 +58,11 @@ internal sealed class AssessmentSessionInMemoryRepository : IAssessmentSessionRe
         
         return Task.CompletedTask;
     }
+
+    public Task RemoveAll(CancellationToken cancellationToken)
+    {
+        _store = new();
+        
+        return Task.CompletedTask;
+    }
 }

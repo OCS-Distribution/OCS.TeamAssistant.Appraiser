@@ -52,7 +52,10 @@ public sealed class AssessmentSession
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(name));
         
         Moderator = Appraiser.Create(id, name);
-        return ConnectAppraiser(Moderator);
+        
+        _appraisers.Add(Moderator);
+
+        return this;
     }
 
     public AssessmentSession ConnectAppraiser(AppraiserId id, string name)
@@ -62,7 +65,10 @@ public sealed class AssessmentSession
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(name));
 
-        return ConnectAppraiser(Appraiser.Create(id, name));
+        var appraiser = Appraiser.Create(id, name);
+        _appraisers.Add(appraiser);
+
+        return this;
     }
 
     public AssessmentSession MoveToNext(string storyTitle)
@@ -107,19 +113,6 @@ public sealed class AssessmentSession
         
         _appraisers.Remove(appraiser);
         
-        return this;
-    }
-
-    private AssessmentSession ConnectAppraiser(Appraiser appraiser)
-    {
-        if (appraiser is null)
-            throw new ArgumentNullException(nameof(appraiser));
-
-        if (_appraisers.Any(a => a.Id == appraiser.Id))
-            throw new AppraiserException($"Вы уже подключен к сессии \"{Title}\".");
-        
-        _appraisers.Add(appraiser);
-
         return this;
     }
 }

@@ -14,6 +14,7 @@ using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.SendMessage;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ShowAppraiserList;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EstimateStory;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ResetEstimate;
+using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.Restart;
 using OCS.TeamAssistant.Appraiser.Backend.Options;
 using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
 
@@ -129,6 +130,9 @@ internal sealed class CommandResultProcessor
 
             yield return Build(estimateEnded: false, resetEstimateResult.StoryTitle, resetEstimateResult.Items);
         }
+
+        if (commandResult is RestartResult)
+            yield return Notification.Create("Память бота очищена.", chatId);
     }
 
     private Notification Build(bool estimateEnded, string storyTitle, IReadOnlyCollection<EstimateItem> items)

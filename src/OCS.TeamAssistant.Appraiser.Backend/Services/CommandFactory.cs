@@ -9,6 +9,7 @@ using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndAssessmentSe
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndEstimate;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EstimateStory;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ResetEstimate;
+using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.Restart;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.SendMessage;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ShowAppraiserList;
 using OCS.TeamAssistant.Appraiser.Domain;
@@ -53,6 +54,7 @@ internal sealed class CommandFactory
             [Commands.End] = (c, cId, uId, uName) => new EndEstimateCommand(uId, uName),
             [Commands.Reset] = (c, cId, uId, uName) => new ResetEstimateCommand(uId, uName),
             [Commands.Exit] = (c, cId, uId, uName) => new EndAssessmentSessionCommand(uId, uName),
+            [Commands.Restart] = (c, cId, uId, uName) => new RestartCommand(),
             [Commands.Help] = (c, cId, uId, uName) => CreateHelpCommand()
         };
         
