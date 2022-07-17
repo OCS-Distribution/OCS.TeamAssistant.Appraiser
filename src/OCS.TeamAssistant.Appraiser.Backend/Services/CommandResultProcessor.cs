@@ -89,6 +89,8 @@ internal sealed class CommandResultProcessor
             var messageBuilder = new StringBuilder();
             messageBuilder.AppendLine($"Необходимо оценить задачу \"{addStoryResult.Title}\".");
 
+            AddEstimateItems(messageBuilder, addStoryResult.Items, estimateEnded: false);
+            
             AddAssessments(messageBuilder);
 
             yield return Notification.Create(
@@ -124,10 +126,11 @@ internal sealed class CommandResultProcessor
 
         if (commandResult is ResetEstimateResult resetEstimateResult)
         {
-            yield return Notification.Create(
-                $"Запущена повторная оценка задачи \"{resetEstimateResult.StoryTitle}\".",
-                resetEstimateResult.AppraiserIds);
-
+            var messageBuilder = new StringBuilder();
+            messageBuilder.AppendLine($"Запущена повторная оценка задачи \"{resetEstimateResult.StoryTitle}\".");
+            AddAssessments(messageBuilder);
+            
+            yield return Notification.Create(messageBuilder.ToString(), resetEstimateResult.AppraiserIds);
             yield return Build(estimateEnded: false, resetEstimateResult.StoryTitle, resetEstimateResult.Items);
         }
 
@@ -145,10 +148,9 @@ internal sealed class CommandResultProcessor
         var messageBuilder = new StringBuilder();
         messageBuilder.AppendLine(estimateEnded
             ? $"Завершена оценка задачи \"{storyTitle}\"."
-            : $"Задача для оценки \"{storyTitle}\".");
-        
-        foreach (var item in items)
-            messageBuilder.AppendLine($"{item.AppraiserName} {DisplayValue(item.Value, estimateEnded)}");
+            : $"Необходимо оценить задачу \"{storyTitle}\".");
+
+        AddEstimateItems(messageBuilder, items, estimateEnded);
         
         if (estimateEnded)
         {
@@ -166,6 +168,20 @@ internal sealed class CommandResultProcessor
         return estimateEnded
             ? Notification.Create(messageBuilder.ToString(), items.Select(i => i.AppraiserId).ToArray())
             : Notification.Edit(messageBuilder.ToString(), items.Select(i => (i.AppraiserId, i.StoryExternalId)).ToArray());
+    }
+
+    private void AddEstimateItems(
+        StringBuilder messageBuilder,
+        IReadOnlyCollection<EstimateItem> items,
+        bool estimateEnded)
+    {
+        if (messageBuilder is null)
+            throw new ArgumentNullException(nameof(messageBuilder));
+        if (items is null)
+            throw new ArgumentNullException(nameof(items));
+        
+        foreach (var item in items)
+            messageBuilder.AppendLine($"{item.AppraiserName} {DisplayValue(item.Value, estimateEnded)}");
     }
     
     private string DisplayValue(AssessmentValue value, bool estimateEnded)
