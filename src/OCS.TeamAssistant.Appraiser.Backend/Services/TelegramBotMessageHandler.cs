@@ -31,16 +31,20 @@ internal sealed class TelegramBotMessageHandler
     {
         if (update.Message?.From is null || update.Message.From.IsBot)
             return;
-        
+
+        var userName = GetName(update.Message.From);
         var command = !string.IsNullOrWhiteSpace(update.Message.Text)
             ? await _commandFactory.Create(
                 update.Message.Text,
                 update.Message.Chat.Id,
                 update.Message.From.Id,
-                GetName(update.Message.From),
+                userName,
                 cancellationToken)
-            : _commandFactory.CreateErrorHandleCommand();
+            : null;
 
+        if (command is null)
+            return;
+        
         try
         {
             var result = await _mediator.Send(command, cancellationToken);
@@ -58,8 +62,8 @@ internal sealed class TelegramBotMessageHandler
                             response.Message,
                             cancellationToken: cancellationToken);
 
-                        if (response.ResponseHandler is not null)
-                            await response.ResponseHandler(targetChatId, message.MessageId, cancellationToken);
+                        if (response.Handler is not null)
+                            await response.Handler(targetChatId, userName, message.MessageId, cancellationToken);
                     }
                 if (response.TargetMessages?.Any() == true)
                     foreach (var message in response.TargetMessages)

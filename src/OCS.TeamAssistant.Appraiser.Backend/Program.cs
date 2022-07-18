@@ -1,5 +1,4 @@
 using MediatR;
-using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.CreateAssessmentSession;
 using OCS.TeamAssistant.Appraiser.Backend.Options;
 using OCS.TeamAssistant.Appraiser.Backend.Services;
@@ -12,7 +11,6 @@ builder.Services
     .AddMediatR(typeof(CreateAssessmentSessionCommand));
 
 builder.Services
-    .AddSingleton<IReportBuilder, ReportBuilder>()
     .AddSingleton<CommandFactory>()
     .AddSingleton<CommandResultProcessor>()
     .AddHostedService<TelegramBotListener>()

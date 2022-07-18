@@ -1,4 +1,4 @@
-namespace OCS.TeamAssistant.Appraiser.Domain;
+namespace OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
 
 public enum AssessmentValue
 {

@@ -1,14 +1,18 @@
+using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
+using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
+
 namespace OCS.TeamAssistant.Appraiser.Domain;
 
 public sealed class Story
 {
     public static readonly Story Empty = new()
     {
-        Title = nameof(Story)
+        Title = nameof(Story),
+        IsActive = false
     };
     
     public string Title { get; private set; } = default!;
-    public bool IaActive { get; private set; }
+    public bool IsActive { get; private set; }
 
     private readonly List<Appraiser> _appraisers;
     public IReadOnlyCollection<Appraiser> Appraisers => _appraisers;
@@ -20,7 +24,7 @@ public sealed class Story
     {
         _appraisers = new();
         _storyForEstimates = new();
-        IaActive = true;
+        IsActive = true;
     }
     
     public static Story Create(string title, IEnumerable<Appraiser> appraisers)
@@ -46,8 +50,12 @@ public sealed class Story
         if (appraiser is null)
             throw new ArgumentNullException(nameof(appraiser));
 
-        var targetAssessment = _storyForEstimates.Single(a => a.Appraiser.Id == appraiser.Id);
-        targetAssessment.SetValue(value);
+        var storyForEstimate = _storyForEstimates.SingleOrDefault(a => a.Appraiser.Id == appraiser.Id);
+
+        if (storyForEstimate is null)
+            throw new AppraiserException("Отсутствует задача для оценки. Дождитесь запуска процесса оценки.");
+        
+        storyForEstimate.SetValue(value);
 
         return this;
     }
@@ -72,15 +80,23 @@ public sealed class Story
         return this;
     }
 
-    public Story End()
+    public Story MoveToComplete()
     {
-        IaActive = false;
+        IsActive = false;
+
+        return this;
+    }
+
+    public Story Reset()
+    {
+        foreach (var storyForEstimate in _storyForEstimates)
+            storyForEstimate.Reset();
+
+        IsActive = true;
 
         return this;
     }
 
     public bool EstimateEnded()
-    {
-        return !IaActive || _appraisers.Count == _storyForEstimates.Count(s => s.Value != AssessmentValue.None);
-    }
+        => !IsActive || _appraisers.Count == _storyForEstimates.Count(s => s.Value != AssessmentValue.None);
 }

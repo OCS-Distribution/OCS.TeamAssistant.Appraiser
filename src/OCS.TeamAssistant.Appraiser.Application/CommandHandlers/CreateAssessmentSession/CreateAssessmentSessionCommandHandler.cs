@@ -1,5 +1,4 @@
 using MediatR;
-using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.CreateAssessmentSession;
 using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
@@ -26,7 +25,7 @@ internal sealed class CreateAssessmentSessionCommandHandler
             throw new ArgumentNullException(nameof(command));
 
         var moderatorId = new AppraiserId(command.ModeratorId);
-        var existsSession = await _assessmentSessionRepository.FindByModerator(moderatorId, cancellationToken);
+        var existsSession = await _assessmentSessionRepository.Find(moderatorId, cancellationToken);
 
         if (existsSession is null)
         {
@@ -38,8 +37,7 @@ internal sealed class CreateAssessmentSessionCommandHandler
         else if (existsSession.State == AssessmentSessionState.Active)
         {
             throw new AppraiserException(
-                $"Найдена активная сессия {existsSession.Title} для модератора {existsSession.Moderator.Name}. " +
-                "Необходимо завершить предыдущую сессию перед созданием новой.");
+                $"Найдена активная сессия \"{existsSession.Title}\" для модератора {existsSession.Moderator.Name}. Необходимо завершить предыдущую сессию перед созданием новой.");
         }
 
         return new CreateAssessmentSessionResult();

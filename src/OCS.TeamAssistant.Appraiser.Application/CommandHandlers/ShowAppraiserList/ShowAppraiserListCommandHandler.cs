@@ -1,5 +1,4 @@
 using MediatR;
-using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ShowAppraiserList;
 using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
@@ -25,7 +24,7 @@ internal sealed class ShowAppraiserListCommandHandler
         if (command is null)
             throw new ArgumentNullException(nameof(command));
         
-        var assessmentSession = await _assessmentSessionRepository.FindByModerator(
+        var assessmentSession = await _assessmentSessionRepository.Find(
             new AppraiserId(command.ModeratorId),
             cancellationToken);
 

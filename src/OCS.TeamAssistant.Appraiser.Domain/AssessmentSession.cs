@@ -52,7 +52,10 @@ public sealed class AssessmentSession
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(name));
         
         Moderator = Appraiser.Create(id, name);
-        return ConnectAppraiser(Moderator);
+        
+        _appraisers.Add(Moderator);
+
+        return this;
     }
 
     public AssessmentSession ConnectAppraiser(AppraiserId id, string name)
@@ -62,10 +65,13 @@ public sealed class AssessmentSession
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(name));
 
-        return ConnectAppraiser(Appraiser.Create(id, name));
+        var appraiser = Appraiser.Create(id, name);
+        _appraisers.Add(appraiser);
+
+        return this;
     }
 
-    public AssessmentSession Next(string storyTitle)
+    public AssessmentSession MoveToNext(string storyTitle)
     {
         if (string.IsNullOrWhiteSpace(storyTitle))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(storyTitle));
@@ -75,23 +81,38 @@ public sealed class AssessmentSession
         return this;
     }
 
-    public AssessmentSession End()
+    public AssessmentSession AsModerator(AppraiserId appraiserId)
+    {
+        if (appraiserId is null)
+            throw new ArgumentNullException(nameof(appraiserId));
+        if (!Moderator.Id.Equals(appraiserId))
+            throw new AppraiserException($"Недостаточно прав для добавления задачи к сессии \"{Title}\".");
+
+        return this;
+    }
+
+    public AssessmentSession MoveToComplete()
     {
         CurrentStory = Story.Empty;
 
         return this;
     }
 
-    private AssessmentSession ConnectAppraiser(Appraiser appraiser)
+    public AssessmentSession DisconnectAppraiser(AppraiserId appraiserId)
     {
+        if (appraiserId is null)
+            throw new ArgumentNullException(nameof(appraiserId));
+
+        var appraiser = _appraisers.SingleOrDefault(a => a.Id == appraiserId);
+
         if (appraiser is null)
-            throw new ArgumentNullException(nameof(appraiser));
+            throw new AppraiserException($"Отклучение завершено с ошибкой. Пользователь не подключен к сессии \"{Title}\".");
 
-        if (_appraisers.Any(a => a.Id == appraiser.Id))
-            throw new AppraiserException($"Вы уже подключен к сессии {Title}.");
+        if (Moderator.Id == appraiser.Id)
+            throw new AppraiserException($"Модератор не может быть отключен от сессии \"{Title}\". Необходимо завершить сессию.");
         
-        _appraisers.Add(appraiser);
-
+        _appraisers.Remove(appraiser);
+        
         return this;
     }
 }

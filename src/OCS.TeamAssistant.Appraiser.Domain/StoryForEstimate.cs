@@ -1,3 +1,5 @@
+using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
+
 namespace OCS.TeamAssistant.Appraiser.Domain;
 
 public sealed class StoryForEstimate
@@ -32,11 +34,5 @@ public sealed class StoryForEstimate
         return this;
     }
 
-    public int? GetValue()
-    {
-        if (Value == AssessmentValue.None || Value == AssessmentValue.Unknown)
-            return null;
-        
-        return (int)Value;
-    }
+    internal void Reset() => Value = AssessmentValue.None;
 }

@@ -1,5 +1,4 @@
 using MediatR;
-using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.AddTaskForEstimate;
 using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
@@ -26,11 +25,11 @@ internal sealed class AddTaskForEstimateCommandHandler
             throw new ArgumentNullException(nameof(command));
         
         var appraiserId = new AppraiserId(command.AppraiserId);
-        var assessmentSession = await _assessmentSessionRepository.FindById(
+        var assessmentSession = await _assessmentSessionRepository.Find(
             new AssessmentSessionId(command.AssessmentSessionId),
             cancellationToken);
         if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException($"Не удалось обнаружить активную сессию для участника {appraiserId.Value}.");
+            throw new AppraiserException($"Не удалось обнаружить активную сессию для участника {command.AppraiserName}.");
         
         var appraiser = assessmentSession.CurrentStory.Appraisers.Single(a => a.Id == appraiserId);
         assessmentSession.CurrentStory.AddStoryForEstimate(StoryForEstimate.Create(appraiser, command.StoryExternalId));

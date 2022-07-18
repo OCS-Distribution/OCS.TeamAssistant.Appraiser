@@ -2,16 +2,18 @@ namespace OCS.TeamAssistant.Appraiser.Backend.Services;
 
 public sealed record Notification
 {
+    public delegate Task ResponseHandler(long chatId, string userName, int messageId, CancellationToken cancellationToken);
+    
     public string Message { get; }
     public IReadOnlyCollection<long>? TargetChatIds { get; }
     public IReadOnlyCollection<(long ChatId, int MessageId)>? TargetMessages { get; }
-    public Func<long, int, CancellationToken, Task>? ResponseHandler { get; }
+    public ResponseHandler? Handler { get; }
 
     private Notification(
         string message,
         IReadOnlyCollection<long>? targetChatIds,
         IReadOnlyCollection<(long UserId, int MessageId)>? targetMessages,
-        Func<long, int, CancellationToken, Task>? responseHandler)
+        ResponseHandler? handler)
     {
         if (string.IsNullOrWhiteSpace(message))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(message));
@@ -19,13 +21,13 @@ public sealed record Notification
         Message = message;
         TargetChatIds = targetChatIds;
         TargetMessages = targetMessages;
-        ResponseHandler = responseHandler;
+        Handler = handler;
     }
 
     public static Notification Create(
         string message,
         IReadOnlyCollection<long> targetChatIds,
-        Func<long, int, CancellationToken, Task>? responseHandler = null)
+        ResponseHandler? responseHandler = null)
     {
         if (string.IsNullOrWhiteSpace(message))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(message));
@@ -38,13 +40,13 @@ public sealed record Notification
     public static Notification Create(
         string message,
         long targetChatId,
-        Func<long, int, CancellationToken, Task>? responseHandler = null)
+        ResponseHandler? responseHandler = null)
         => Create(message, new[] { targetChatId }, responseHandler);
 
     public static Notification Edit(
         string message,
         IReadOnlyCollection<(long ChatId, int MessageId)> targetMessages,
-        Func<long, int, CancellationToken, Task>? responseHandler = null)
+        ResponseHandler? responseHandler = null)
     {
         if (string.IsNullOrWhiteSpace(message))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(message));

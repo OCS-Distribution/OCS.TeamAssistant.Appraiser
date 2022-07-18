@@ -2,6 +2,7 @@ using MediatR;
 using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.AddTask;
 using OCS.TeamAssistant.Appraiser.Domain;
+using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
@@ -23,18 +24,26 @@ internal sealed class AddStoryCommandHandler : IRequestHandler<AddStoryCommand, 
             throw new ArgumentNullException(nameof(command));
 
         var moderatorId = new AppraiserId(command.ModeratorId);
-        var assessmentSession = await _assessmentSessionRepository.FindByModerator(moderatorId, cancellationToken);
+        var assessmentSession = await _assessmentSessionRepository.Find(moderatorId, cancellationToken);
         
         if (assessmentSession?.State != AssessmentSessionState.Active)
             throw new AppraiserException($"Не удалось обнаружить активную сессию для модератора {command.ModeratorName}.");
-        if (!assessmentSession.Moderator.Id.Equals(moderatorId))
-            throw new AppraiserException($"У модератора {command.ModeratorName} недостаточно прав для добавления задачи к сессии {assessmentSession.Title}.");
 
-        assessmentSession.Next(command.Title);
+        assessmentSession
+            .AsModerator(moderatorId)
+            .MoveToNext(command.Title);
 
         await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
 
-        var appraiserIds = assessmentSession.Appraisers.Select(a => a.Id.Value).ToArray();
-        return new AddStoryResult(assessmentSession.Id.Value, assessmentSession.CurrentStory.Title, appraiserIds);
+        var appraiserIds = assessmentSession.CurrentStory.Appraisers.Select(a => a.Id.Value).ToArray();
+        var items = assessmentSession.CurrentStory.Appraisers
+            .Select(a => new EstimateItem(a.Id.Value, a.Name, 0, AssessmentValue.None))
+            .ToArray();
+        
+        return new AddStoryResult(
+            assessmentSession.Id.Value,
+            assessmentSession.CurrentStory.Title,
+            appraiserIds,
+            items);
     }
 }

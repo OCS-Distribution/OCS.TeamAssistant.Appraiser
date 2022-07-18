@@ -7,12 +7,16 @@ using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.AddTask;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.AddTaskForEstimate;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ConnectAppraiser;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.CreateAssessmentSession;
+using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.DisconnectAppraiser;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndAssessmentSession;
+using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndEstimate;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.SendMessage;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ShowAppraiserList;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndEstimates;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EstimateStory;
+using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ResetEstimate;
+using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.Restart;
 using OCS.TeamAssistant.Appraiser.Backend.Options;
+using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
 
 namespace OCS.TeamAssistant.Appraiser.Backend.Services;
 
@@ -42,7 +46,7 @@ internal sealed class CommandResultProcessor
                 activateAssessmentSessionResult.Id);
 
             yield return Notification.Create(
-                $"Для подключения к \"{activateAssessmentSessionResult.Title}\" перейдите по ссылке {linkForConnect}",
+                $"Для подключения к \"{activateAssessmentSessionResult.Title}\" перейдите по ссылке и нажмите start {linkForConnect}",
                 chatId);
         }
 
@@ -51,36 +55,87 @@ internal sealed class CommandResultProcessor
             yield return Notification.Create(
                 $"Успешное подключение к сессии оценки \"{connectAppraiserResult.AssessmentSessionTitle}\".",
                 chatId);
+            
             if (connectAppraiserResult.ChatId != chatId)
                 yield return Notification.Create(
                     $"Участник {connectAppraiserResult.AppraiserName} подключен к сессии \"{connectAppraiserResult.AssessmentSessionTitle}\".",
                     connectAppraiserResult.ChatId);
         }
 
-        if (commandResult is ShowAppraiserListResult showAppraiserListResult)
+        if (commandResult is DisconnectAppraiserResult disconnectAppraiserResult)
+        {
             yield return Notification.Create(
-                $"К сессии подключены: {string.Join(", ", showAppraiserListResult.Appraisers)}",
+                $"Успешное отключение от сессии \"{disconnectAppraiserResult.AssessmentSessionTitle}\".",
                 chatId);
+
+            if (disconnectAppraiserResult.ChatId != chatId)
+                yield return Notification.Create(
+                    $"Участник {disconnectAppraiserResult.AppraiserName} отключен от сессии {disconnectAppraiserResult.AssessmentSessionTitle}.",
+                    disconnectAppraiserResult.ChatId);
+        }
+
+        if (commandResult is ShowAppraiserListResult showAppraiserListResult)
+        {
+            var messageBuilder = new StringBuilder();
+            messageBuilder.AppendLine("К сессии подключены:");
+            foreach (var appraiser in showAppraiserListResult.Appraisers)
+                messageBuilder.AppendLine(appraiser);
+
+            yield return Notification.Create(messageBuilder.ToString(), chatId);
+        }
 
         if (commandResult is AddStoryResult addStoryResult)
+        {
+            var messageBuilder = new StringBuilder();
+            messageBuilder.AppendLine($"Необходимо оценить задачу \"{addStoryResult.Title}\".");
+
+            AddEstimateItems(messageBuilder, addStoryResult.Items, estimateEnded: false);
+            
+            AddAssessments(messageBuilder);
+
             yield return Notification.Create(
-                $"Необходимо оценить задачу \"{addStoryResult.Title}\". Для оценки начните вводить команду /set.",
+                messageBuilder.ToString(),
                 addStoryResult.AppraiserIds,
-                (uId, sId, t) => SetStoryId(addStoryResult.AssessmentSessionId, uId, sId, t));
+                (cId, uId, mId, t) => SetStoryId(addStoryResult.AssessmentSessionId, cId, uId, mId, t));
+        }
 
         if (commandResult is EndEstimateResult showResultsResult)
+        {
+            yield return Build(estimateEnded: false, showResultsResult.StoryTitle, showResultsResult.Items);
             yield return Build(estimateEnded: true, showResultsResult.StoryTitle, showResultsResult.Items);
+        }
 
         if (commandResult is EstimateStoryResult estimateStoryResult)
-            yield return Build(estimateStoryResult.EstimateEnded, estimateStoryResult.StoryTitle, estimateStoryResult.Items);
+        {
+            yield return Build(estimateEnded: false, estimateStoryResult.StoryTitle, estimateStoryResult.Items);
+            if (estimateStoryResult.EstimateEnded)
+                yield return Build(estimateEnded: true, estimateStoryResult.StoryTitle, estimateStoryResult.Items);
+        }
 
         if (commandResult is EndAssessmentSessionResult endAssessmentSessionResult)
+        {
+            var targets = endAssessmentSessionResult.AppraiserIds.Append(chatId).Distinct().ToArray();
+            
             yield return Notification.Create(
                 $"Сессия оценки \"{endAssessmentSessionResult.AssessmentSessionTitle}\" завершена.",
-                chatId);
-
+                targets);
+        }
+        
         if (commandResult is SendMessageResult sendMessageResult)
             yield return Notification.Create(sendMessageResult.Text, chatId);
+
+        if (commandResult is ResetEstimateResult resetEstimateResult)
+        {
+            var messageBuilder = new StringBuilder();
+            messageBuilder.AppendLine($"Запущена повторная оценка задачи \"{resetEstimateResult.StoryTitle}\".");
+            AddAssessments(messageBuilder);
+            
+            yield return Notification.Create(messageBuilder.ToString(), resetEstimateResult.AppraiserIds);
+            yield return Build(estimateEnded: false, resetEstimateResult.StoryTitle, resetEstimateResult.Items);
+        }
+
+        if (commandResult is RestartResult)
+            yield return Notification.Create("Память бота очищена.", chatId);
     }
 
     private Notification Build(bool estimateEnded, string storyTitle, IReadOnlyCollection<EstimateItem> items)
@@ -89,30 +144,76 @@ internal sealed class CommandResultProcessor
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(storyTitle));
         if (items is null)
             throw new ArgumentNullException(nameof(items));
-        
-        var targetMessages = items.Select(i => (i.AppraiserId, i.StoryExternalId)).ToArray();
-                
+
         var messageBuilder = new StringBuilder();
         messageBuilder.AppendLine(estimateEnded
             ? $"Завершена оценка задачи \"{storyTitle}\"."
-            : $"Задача для оценки \"{storyTitle}\".");
+            : $"Необходимо оценить задачу \"{storyTitle}\".");
 
-        foreach (var item in items)
-            messageBuilder.AppendLine($"{item.AppraiserName}: {item.DisplayValue}");
+        AddEstimateItems(messageBuilder, items, estimateEnded);
         
         if (estimateEnded)
         {
-            var values = items.Where(i => i.Value.HasValue).Select(i => i.Value!.Value).ToArray();
+            var values = items
+                .Where(i => AssessmentValueRules.GetAssessments.Contains(i.Value))
+                .Select(i => (int)i.Value)
+                .ToArray();
+            
             if (values.Any())
                 messageBuilder.AppendLine($"Среднее значение: {values.Sum() / (decimal)values.Length:.##} SP");
         }
+        else
+            AddAssessments(messageBuilder);
+
+        return estimateEnded
+            ? Notification.Create(messageBuilder.ToString(), items.Select(i => i.AppraiserId).ToArray())
+            : Notification.Edit(messageBuilder.ToString(), items.Select(i => (i.AppraiserId, i.StoryExternalId)).ToArray());
+    }
+
+    private void AddEstimateItems(
+        StringBuilder messageBuilder,
+        IReadOnlyCollection<EstimateItem> items,
+        bool estimateEnded)
+    {
+        if (messageBuilder is null)
+            throw new ArgumentNullException(nameof(messageBuilder));
+        if (items is null)
+            throw new ArgumentNullException(nameof(items));
         
-        return Notification.Edit(messageBuilder.ToString(), targetMessages);
+        foreach (var item in items)
+            messageBuilder.AppendLine($"{item.AppraiserName} {DisplayValue(item.Value, estimateEnded)}");
+    }
+    
+    private string DisplayValue(AssessmentValue value, bool estimateEnded)
+    {
+        if (estimateEnded)
+            return value switch
+            {
+                AssessmentValue.Unknown => "?",
+                AssessmentValue.None => "-",
+                _ => ((int)value).ToString()
+            };
+
+        return value == AssessmentValue.None ? string.Empty : "+";
+    }
+    
+    private void AddAssessments(StringBuilder messageBuilder)
+    {
+        if (messageBuilder is null)
+            throw new ArgumentNullException(nameof(messageBuilder));
+
+        messageBuilder.Append("Выберите одну из оценок:");
+        
+        foreach (var assessment in AssessmentValueRules.GetAssessments)
+            messageBuilder.Append($" /{assessment.ToString().ToLower()}");
+        
+        messageBuilder.Append(" /noidea");
     }
 
     private async Task SetStoryId(
         Guid assessmentSessionId,
         long chatId,
+        string userName,
         int messageId,
         CancellationToken cancellationToken)
     {
@@ -122,6 +223,7 @@ internal sealed class CommandResultProcessor
         await mediatr.Send(new AddTaskForEstimateCommand(
             assessmentSessionId,
             chatId,
+            userName,
             messageId), cancellationToken);
     }
 }

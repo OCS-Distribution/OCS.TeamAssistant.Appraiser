@@ -1,5 +1,4 @@
 using MediatR;
-using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ConnectAppraiser;
 using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
@@ -24,13 +23,24 @@ internal sealed class ConnectAppraiserCommandHandler : IRequestHandler<ConnectAp
         if (command is null)
             throw new ArgumentNullException(nameof(command));
 
+        var appraiserId = new AppraiserId(command.AppraiserId);
+        var existSessionAssessmentSession = await _assessmentSessionRepository.Find(appraiserId, cancellationToken);
+        if (existSessionAssessmentSession is not null)
+        {
+            var errorMessage = existSessionAssessmentSession.Id.Value == command.AssessmentSessionId
+                ? $"Вы уже подключены к сессии {existSessionAssessmentSession.Title}."
+                : $"Подключение невозможно. Участник {command.AppraiserName} подключен к другой сессии {existSessionAssessmentSession.Title}.";
+            
+            throw new AppraiserException(errorMessage);
+        }
+
         var assessmentSessionId = new AssessmentSessionId(command.AssessmentSessionId);
-        var assessmentSession = await _assessmentSessionRepository.FindById(assessmentSessionId, cancellationToken);
+        var assessmentSession = await _assessmentSessionRepository.Find(assessmentSessionId, cancellationToken);
 
         if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException($"Сессия {assessmentSessionId.Value} не найдена. Обратитесь к модератору.");
+            throw new AppraiserException($"Сессия \"{assessmentSessionId.Value}\" не найдена. Обратитесь к модератору.");
         
-        assessmentSession.ConnectAppraiser(new AppraiserId(command.AppraiserId), command.AppraiserName);
+        assessmentSession.ConnectAppraiser(appraiserId, command.AppraiserName);
         
         await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
         

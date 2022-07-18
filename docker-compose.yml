@@ -1,0 +1,15 @@
+version: "3.9"
+services:
+  appraiser_backend:
+    image: dyatlovhome/ocs.teamassistant.appraiser:1.0.6
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - TelegramBotOptions__AccessToken=
+    container_name: appraiser_backend
+    ports:
+      - "80:8080"
+    networks:
+      - team_assistant
+
+networks: 
+  team_assistant: {}
