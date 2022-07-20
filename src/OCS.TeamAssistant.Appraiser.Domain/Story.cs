@@ -1,5 +1,6 @@
 using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
+using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Domain;
 
@@ -53,7 +54,7 @@ public sealed class Story
         var storyForEstimate = _storyForEstimates.SingleOrDefault(a => a.Appraiser.Id == appraiser.Id);
 
         if (storyForEstimate is null)
-            throw new AppraiserException("Отсутствует задача для оценки. Дождитесь запуска процесса оценки.");
+            throw new AppraiserException(MessageId.MissingTaskForEvaluate);
         
         storyForEstimate.SetValue(value);
 

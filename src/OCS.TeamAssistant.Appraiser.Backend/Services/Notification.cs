@@ -1,58 +1,66 @@
+using OCS.TeamAssistant.Appraiser.Domain.Keys;
+
 namespace OCS.TeamAssistant.Appraiser.Backend.Services;
 
-public sealed record Notification
+public sealed class Notification
 {
     public delegate Task ResponseHandler(long chatId, string userName, int messageId, CancellationToken cancellationToken);
     
-    public string Message { get; }
+    public MessageId MessageId { get; }
+    public object[] MessageValues { get; }
     public IReadOnlyCollection<long>? TargetChatIds { get; }
     public IReadOnlyCollection<(long ChatId, int MessageId)>? TargetMessages { get; }
-    public ResponseHandler? Handler { get; }
+    public ResponseHandler? Handler { get; private set; }
 
     private Notification(
-        string message,
         IReadOnlyCollection<long>? targetChatIds,
         IReadOnlyCollection<(long UserId, int MessageId)>? targetMessages,
-        ResponseHandler? handler)
+        MessageId messageId,
+        object[] messageValues)
     {
-        if (string.IsNullOrWhiteSpace(message))
-            throw new ArgumentException("Value cannot be null or whitespace.", nameof(message));
-
-        Message = message;
+        MessageId = messageId ?? throw new ArgumentNullException(nameof(messageId));
+        MessageValues = messageValues ?? throw new ArgumentNullException(nameof(messageValues));
         TargetChatIds = targetChatIds;
         TargetMessages = targetMessages;
-        Handler = handler;
+    }
+
+    public Notification AddHandler(ResponseHandler handler)
+    {
+        Handler = handler ?? throw new ArgumentNullException(nameof(handler));
+
+        return this;
     }
 
     public static Notification Create(
-        string message,
         IReadOnlyCollection<long> targetChatIds,
-        ResponseHandler? responseHandler = null)
+        MessageId messageId,
+        params object[] messageValues)
     {
-        if (string.IsNullOrWhiteSpace(message))
-            throw new ArgumentException("Value cannot be null or whitespace.", nameof(message));
         if (targetChatIds is null)
             throw new ArgumentNullException(nameof(targetChatIds));
+        if (messageId is null)
+            throw new ArgumentNullException(nameof(messageId));
+        if (messageValues is null)
+            throw new ArgumentNullException(nameof(messageValues));
 
-        return new Notification(message, targetChatIds, targetMessages: null, responseHandler);
+        return new Notification(targetChatIds, targetMessages: null, messageId, messageValues);
     }
 
-    public static Notification Create(
-        string message,
-        long targetChatId,
-        ResponseHandler? responseHandler = null)
-        => Create(message, new[] { targetChatId }, responseHandler);
+    public static Notification Create(long targetChatId, MessageId messageId, params object[] messageValues)
+        => Create(new[] { targetChatId }, messageId, messageValues);
 
     public static Notification Edit(
-        string message,
         IReadOnlyCollection<(long ChatId, int MessageId)> targetMessages,
-        ResponseHandler? responseHandler = null)
+        MessageId messageId,
+        params object[] messageValues)
     {
-        if (string.IsNullOrWhiteSpace(message))
-            throw new ArgumentException("Value cannot be null or whitespace.", nameof(message));
         if (targetMessages is null)
             throw new ArgumentNullException(nameof(targetMessages));
+        if (messageId is null)
+            throw new ArgumentNullException(nameof(messageId));
+        if (messageValues is null)
+            throw new ArgumentNullException(nameof(messageValues));
 
-        return new Notification(message, targetChatIds: null, targetMessages, responseHandler);
+        return new Notification(targetChatIds: null, targetMessages, messageId, messageValues);
     }
 }

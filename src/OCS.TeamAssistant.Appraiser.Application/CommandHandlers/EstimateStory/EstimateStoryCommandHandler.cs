@@ -24,14 +24,13 @@ internal sealed class EstimateStoryCommandHandler : IRequestHandler<EstimateStor
 
         var appraiserId = new AppraiserId(command.AppraiserId);
         var assessmentSession = await _assessmentSessionRepository.Find(appraiserId, cancellationToken);
-        
-        if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException(
-                $"Не удалось найти активную сессию для участника {command.AppraiserName}. Обратитесь к модератору.");
+
+        var targetState = AssessmentSessionState.Active;
+        if (assessmentSession?.State != targetState)
+            throw new AppraiserException(MessageId.SessionNotFoundForAppraiser, targetState, command.AppraiserName);
 
         if (assessmentSession.CurrentStory.EstimateEnded())
-            throw new AppraiserException(
-                $"Ваша оценка не принята. Оценка задачи \"{assessmentSession.CurrentStory.Title}\" закончена.");
+            throw new AppraiserException(MessageId.EstimateRejected, assessmentSession.CurrentStory.Title);
 
         var appraiser = assessmentSession.Appraisers.Single(a => a.Id == appraiserId);
         assessmentSession.CurrentStory.Estimate(appraiser, command.Value);

@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using OCS.TeamAssistant.Appraiser.DataAccess.InMemory.Extensions;
 using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
@@ -30,7 +29,9 @@ internal sealed class AssessmentSessionInMemoryRepository : IAssessmentSessionRe
             0 => Task.FromResult<AssessmentSession?>(default),
             1 => Task.FromResult<AssessmentSession?>(assessmentSessions[0]),
             _ => throw new AppraiserException(
-                $"Найдено {assessmentSessions.Length} активные сессии для участника {assessmentSessions.GetAppraiserById(appraiserId).Name}.")
+                MessageId.ActiveSessionsFound,
+                assessmentSessions.Length,
+                appraiserId.Value)
         };
     }
 

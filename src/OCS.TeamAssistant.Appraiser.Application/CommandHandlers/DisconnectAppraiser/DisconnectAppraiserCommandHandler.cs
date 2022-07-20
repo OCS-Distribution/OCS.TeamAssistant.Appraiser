@@ -26,10 +26,10 @@ internal sealed class DisconnectAppraiserCommandHandler
 
         var appraiserId = new AppraiserId(command.AppraiserId);
         var assessmentSession = await _assessmentSessionRepository.Find(appraiserId, cancellationToken);
-        
-        if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException(
-                $"Не удалось обнаружить активную сессию для участника {command.AppraiserName}.");
+
+        var targetState = AssessmentSessionState.Active;
+        if (assessmentSession?.State != targetState)
+            throw new AppraiserException(MessageId.SessionNotFoundForAppraiser, targetState, command.AppraiserName);
 
         assessmentSession.DisconnectAppraiser(appraiserId);
 

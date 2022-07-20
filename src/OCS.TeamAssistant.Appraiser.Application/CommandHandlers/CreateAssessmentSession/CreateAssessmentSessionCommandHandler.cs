@@ -35,10 +35,10 @@ internal sealed class CreateAssessmentSessionCommandHandler
             await _assessmentSessionRepository.Add(assessmentSession, cancellationToken);
         }
         else if (existsSession.State == AssessmentSessionState.Active)
-        {
             throw new AppraiserException(
-                $"Найдена активная сессия \"{existsSession.Title}\" для модератора {existsSession.Moderator.Name}. Необходимо завершить предыдущую сессию перед созданием новой.");
-        }
+                MessageId.SessionExistsForModerator,
+                existsSession.Title,
+                existsSession.Moderator.Name);
 
         return new CreateAssessmentSessionResult();
     }

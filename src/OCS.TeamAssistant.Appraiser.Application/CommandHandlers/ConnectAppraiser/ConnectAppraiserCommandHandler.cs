@@ -27,18 +27,19 @@ internal sealed class ConnectAppraiserCommandHandler : IRequestHandler<ConnectAp
         var existSessionAssessmentSession = await _assessmentSessionRepository.Find(appraiserId, cancellationToken);
         if (existSessionAssessmentSession is not null)
         {
-            var errorMessage = existSessionAssessmentSession.Id.Value == command.AssessmentSessionId
-                ? $"Вы уже подключены к сессии {existSessionAssessmentSession.Title}."
-                : $"Подключение невозможно. Участник {command.AppraiserName} подключен к другой сессии {existSessionAssessmentSession.Title}.";
+            var messageId = existSessionAssessmentSession.Id.Value == command.AssessmentSessionId
+                ? MessageId.AppraiserConnectWithError
+                : MessageId.AppraiserConnectedToOtherSession;
             
-            throw new AppraiserException(errorMessage);
+            throw new AppraiserException(messageId, command.AppraiserName, existSessionAssessmentSession.Title);
         }
 
         var assessmentSessionId = new AssessmentSessionId(command.AssessmentSessionId);
         var assessmentSession = await _assessmentSessionRepository.Find(assessmentSessionId, cancellationToken);
 
-        if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException($"Сессия \"{assessmentSessionId.Value}\" не найдена. Обратитесь к модератору.");
+        var targetState = AssessmentSessionState.Active;
+        if (assessmentSession?.State != targetState)
+            throw new AppraiserException(MessageId.SessionNotFoundForAppraiser, targetState, command.AppraiserName);
         
         assessmentSession.ConnectAppraiser(appraiserId, command.AppraiserName);
         

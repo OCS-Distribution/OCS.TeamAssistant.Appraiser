@@ -1,5 +1,6 @@
 using System.Text;
 using MediatR;
+using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ActivateAssessmentSession;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.AddTask;
 using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ConnectAppraiser;
@@ -21,25 +22,27 @@ namespace OCS.TeamAssistant.Appraiser.Backend.Services;
 internal sealed class CommandFactory
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly IMessageBuilder _messageBuilder;
     private readonly Dictionary<string, Func<string, long, long, string, IBaseRequest?>> _commandList;
-    private readonly IReadOnlyCollection<(string Command, string Text)> _commandHelp;
+    private readonly IReadOnlyCollection<(string Command, MessageId MessageId)> _commandHelp;
     private readonly HashSet<string> _targets;
 
-    public CommandFactory(IServiceProvider serviceProvider)
+    public CommandFactory(IServiceProvider serviceProvider, IMessageBuilder messageBuilder)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _messageBuilder = messageBuilder ?? throw new ArgumentNullException(nameof(messageBuilder));
 
         _commandHelp = new []
         {
-            (Commands.Disconnect, "{0} - отключиться от сессии оценки"),
-            (Commands.New, "{0} - создать сессию"),
-            (Commands.Users, "{0} - список пользователей"),
-            (Commands.Add, "{0}{{task}} - добавление задачи для оценки"),
-            (Commands.Set, "{0}{{3}} - задать оценку"),
-            (Commands.NoIdea, "{0} - без понятия"),
-            (Commands.End, "{0} - завершение оценки"),
-            (Commands.Reset, "{0} - перезапустить оценку задачи"),
-            (Commands.Exit, "{0} - завершение сессии")
+            (Commands.Disconnect, MessageId.DisconnectCommandHelp),
+            (Commands.New, MessageId.NewCommandHelp),
+            (Commands.Users, MessageId.UsersCommandHelp),
+            (Commands.Add, MessageId.AddCommandHelp),
+            (Commands.Set, MessageId.SetCommandHelp),
+            (Commands.NoIdea, MessageId.NoIdeaCommandHelp),
+            (Commands.End, MessageId.EndCommandHelp),
+            (Commands.Reset, MessageId.ResetCommandHelp),
+            (Commands.Exit, MessageId.ExitCommandHelp)
         };
         
         _commandList = new()
@@ -103,7 +106,7 @@ internal sealed class CommandFactory
         var messageBuilder = new StringBuilder();
 
         foreach (var item in _commandHelp)
-            messageBuilder.AppendLine(string.Format(item.Text, item.Command));
+            messageBuilder.AppendLine(_messageBuilder.Build(item.MessageId, item.Command));
 
         return new SendMessageCommand(messageBuilder.ToString());
     }
@@ -120,7 +123,10 @@ internal sealed class CommandFactory
 
         return _targets.Contains(parameter)
             ? new EstimateStoryCommand(userId, userName, int.Parse(parameter))
-            : new SendMessageCommand($"Недопустимая оценка {parameter}. Список оценок: {string.Join(", ", _targets)}");
+            : new SendMessageCommand(_messageBuilder.Build(
+                MessageId.EnterEstimateWithError,
+                parameter,
+                string.Join(", ", _targets)));
     }
 
     private IBaseRequest CreateConnectAppraiserCommand(string commandText, long userId, string userName)
@@ -136,7 +142,7 @@ internal sealed class CommandFactory
 
         return !string.IsNullOrWhiteSpace(userName) && Guid.TryParse(assessmentSessionId, out var value)
             ? new ConnectAppraiserCommand(value, userId, userName)
-            : new SendMessageCommand("Команда введена неверно. Проверьте команду и попробуйте еще раз.");
+            : new SendMessageCommand(_messageBuilder.Build(MessageId.EnterCommandWithError));
     }
 
     private async Task<IBaseRequest?> FindDraftSession(

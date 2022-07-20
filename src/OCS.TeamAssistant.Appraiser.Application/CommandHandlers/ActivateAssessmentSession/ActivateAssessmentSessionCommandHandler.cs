@@ -27,8 +27,9 @@ internal sealed class ActivateAssessmentSessionCommandHandler
         var moderatorId = new AppraiserId(command.ModeratorId);
         var assessmentSession = await _assessmentSessionRepository.Find(moderatorId, cancellationToken);
 
-        if (assessmentSession?.State != AssessmentSessionState.Draft)
-            throw new AppraiserException($"Не найден черновик сессии для модератора {command.ModeratorName}.");
+        var targetState = AssessmentSessionState.Draft;
+        if (assessmentSession?.State != targetState)
+            throw new AppraiserException(MessageId.SessionNotFoundForModerator, targetState, command.ModeratorName);
 
         assessmentSession
             .AsModerator(moderatorId)

@@ -24,10 +24,10 @@ internal sealed class ResetEstimateCommandHandler : IRequestHandler<ResetEstimat
 
         var moderatorId = new AppraiserId(command.ModeratorId);
         var assessmentSession = await _assessmentSessionRepository.Find(moderatorId, cancellationToken);
-        
-        if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException(
-                $"Не удалось найти активную сессию для участника {command.ModeratorName}. Обратитесь к модератору.");
+
+        var targetState = AssessmentSessionState.Active;
+        if (assessmentSession?.State != targetState)
+            throw new AppraiserException(MessageId.SessionNotFoundForAppraiser, targetState, command.ModeratorName);
 
         assessmentSession
             .AsModerator(moderatorId)

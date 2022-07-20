@@ -8,6 +8,7 @@ public sealed class AssessmentSession
     public AssessmentSessionId Id { get; private set; } = default!;
     public long ChatId { get; private set; }
     public Appraiser Moderator { get; private set; } = default!;
+    public LanguageId LanguageId { get; private set; }
     public string Title { get; private set; } = default!;
     public AssessmentSessionState State { get; private set; }
     public Story CurrentStory { get; private set; } = default!;
@@ -18,6 +19,7 @@ public sealed class AssessmentSession
     private AssessmentSession()
     {
         _appraisers = new();
+        LanguageId = LanguageId.Default;
     }
     
     public static AssessmentSession Create(long chatId)
@@ -86,7 +88,7 @@ public sealed class AssessmentSession
         if (appraiserId is null)
             throw new ArgumentNullException(nameof(appraiserId));
         if (!Moderator.Id.Equals(appraiserId))
-            throw new AppraiserException($"Недостаточно прав для добавления задачи к сессии \"{Title}\".");
+            throw new AppraiserException(MessageId.NoRightsAddTaskToSession, Title);
 
         return this;
     }
@@ -106,10 +108,10 @@ public sealed class AssessmentSession
         var appraiser = _appraisers.SingleOrDefault(a => a.Id == appraiserId);
 
         if (appraiser is null)
-            throw new AppraiserException($"Отклучение завершено с ошибкой. Пользователь не подключен к сессии \"{Title}\".");
+            throw new AppraiserException(MessageId.ShutdownCompletedWithError, Title);
 
         if (Moderator.Id == appraiser.Id)
-            throw new AppraiserException($"Модератор не может быть отключен от сессии \"{Title}\". Необходимо завершить сессию.");
+            throw new AppraiserException(MessageId.ModeratorCannotDisconnectedFromSession, Title);
         
         _appraisers.Remove(appraiser);
         

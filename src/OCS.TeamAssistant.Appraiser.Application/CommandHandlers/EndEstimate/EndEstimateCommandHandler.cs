@@ -24,9 +24,9 @@ internal sealed class EndEstimateCommandHandler : IRequestHandler<EndEstimateCom
 
         var moderatorId = new AppraiserId(command.ModeratorId);
         var assessmentSession = await _assessmentSessionRepository.Find(moderatorId, cancellationToken);
-        if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException(
-                $"Не удалось обнаружить активную сессию для модератора {command.ModeratorName}.");
+        var targetState = AssessmentSessionState.Active;
+        if (assessmentSession?.State != targetState)
+            throw new AppraiserException(MessageId.SessionNotFoundForModerator, targetState, command.ModeratorName);
 
         var currentStory = assessmentSession.CurrentStory;
         
