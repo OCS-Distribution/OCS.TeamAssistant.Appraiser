@@ -1,12 +1,13 @@
 using MediatR;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ConnectAppraiser;
+using OCS.TeamAssistant.Appraiser.Application.Contracts;
+using OCS.TeamAssistant.Appraiser.Application.Extensions;
 using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.ConnectAppraiser;
 
-internal sealed class ConnectAppraiserCommandHandler : IRequestHandler<ConnectAppraiserCommand, ConnectAppraiserResult>
+internal sealed class ConnectAppraiserCommandHandler : IRequestHandler<IConnectAppraiserCommand, ConnectAppraiserResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
 
@@ -15,9 +16,9 @@ internal sealed class ConnectAppraiserCommandHandler : IRequestHandler<ConnectAp
         _assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
     }
-    
+
     public async Task<ConnectAppraiserResult> Handle(
-        ConnectAppraiserCommand command,
+        IConnectAppraiserCommand command,
         CancellationToken cancellationToken)
     {
         if (command is null)
@@ -30,21 +31,18 @@ internal sealed class ConnectAppraiserCommandHandler : IRequestHandler<ConnectAp
             var messageId = existSessionAssessmentSession.Id.Value == command.AssessmentSessionId
                 ? MessageId.AppraiserConnectWithError
                 : MessageId.AppraiserConnectedToOtherSession;
-            
-            throw new AppraiserException(messageId, command.AppraiserName, existSessionAssessmentSession.Title);
+
+            throw new AppraiserUserException(messageId, command.AppraiserName, existSessionAssessmentSession.Title);
         }
 
-        var assessmentSessionId = new AssessmentSessionId(command.AssessmentSessionId);
-        var assessmentSession = await _assessmentSessionRepository.Find(assessmentSessionId, cancellationToken);
+        var assessmentSession = await _assessmentSessionRepository
+			.Find(new AssessmentSessionId(command.AssessmentSessionId), cancellationToken)
+			.EnsureForAppraiser(AssessmentSessionState.Active, command.AppraiserName);
 
-        var targetState = AssessmentSessionState.Active;
-        if (assessmentSession?.State != targetState)
-            throw new AppraiserException(MessageId.SessionNotFoundForAppraiser, targetState, command.AppraiserName);
-        
-        assessmentSession.ConnectAppraiser(appraiserId, command.AppraiserName);
-        
+		assessmentSession.ConnectAppraiser(appraiserId, command.AppraiserName);
+
         await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
-        
-        return new ConnectAppraiserResult(assessmentSession.ChatId, assessmentSession.Title, command.AppraiserName);
+
+        return new(assessmentSession.ChatId, assessmentSession.Title, command.AppraiserName);
     }
 }

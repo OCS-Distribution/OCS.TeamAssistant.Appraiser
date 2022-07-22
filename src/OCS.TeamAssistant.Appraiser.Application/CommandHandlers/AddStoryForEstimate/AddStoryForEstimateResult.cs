@@ -1,0 +1,3 @@
+namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.AddStoryForEstimate;
+
+public sealed record AddStoryForEstimateResult;

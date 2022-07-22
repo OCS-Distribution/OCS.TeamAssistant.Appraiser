@@ -1,5 +1,5 @@
 using MediatR;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.CreateAssessmentSession;
+using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
@@ -7,7 +7,7 @@ using OCS.TeamAssistant.Appraiser.Domain.Keys;
 namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.CreateAssessmentSession;
 
 internal sealed class CreateAssessmentSessionCommandHandler
-    : IRequestHandler<CreateAssessmentSessionCommand, CreateAssessmentSessionResult>
+    : IRequestHandler<ICreateAssessmentSessionCommand, CreateAssessmentSessionResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
 
@@ -18,7 +18,7 @@ internal sealed class CreateAssessmentSessionCommandHandler
     }
 
     public async Task<CreateAssessmentSessionResult> Handle(
-        CreateAssessmentSessionCommand command,
+        ICreateAssessmentSessionCommand command,
         CancellationToken cancellationToken)
     {
         if (command is null)
@@ -35,11 +35,11 @@ internal sealed class CreateAssessmentSessionCommandHandler
             await _assessmentSessionRepository.Add(assessmentSession, cancellationToken);
         }
         else if (existsSession.State == AssessmentSessionState.Active)
-            throw new AppraiserException(
+            throw new AppraiserUserException(
                 MessageId.SessionExistsForModerator,
                 existsSession.Title,
                 existsSession.Moderator.Name);
 
-        return new CreateAssessmentSessionResult();
+        return new();
     }
 }

@@ -1,13 +1,13 @@
 using MediatR;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndAssessmentSession;
+using OCS.TeamAssistant.Appraiser.Application.Contracts;
+using OCS.TeamAssistant.Appraiser.Application.Extensions;
 using OCS.TeamAssistant.Appraiser.Domain;
-using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.EndAssessmentSession;
 
 internal sealed class EndAssessmentSessionCommandHandler
-    : IRequestHandler<EndAssessmentSessionCommand, EndAssessmentSessionResult>
+    : IRequestHandler<IEndAssessmentSessionCommand, EndAssessmentSessionResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
 
@@ -16,28 +16,26 @@ internal sealed class EndAssessmentSessionCommandHandler
         _assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
     }
-    
+
     public async Task<EndAssessmentSessionResult> Handle(
-        EndAssessmentSessionCommand command,
+        IEndAssessmentSessionCommand command,
         CancellationToken cancellationToken)
     {
         if (command is null)
             throw new ArgumentNullException(nameof(command));
 
         var moderatorId = new AppraiserId(command.ModeratorId);
-        var assessmentSession = await _assessmentSessionRepository.Find(moderatorId, cancellationToken);
+        var assessmentSession = await _assessmentSessionRepository
+			.Find(moderatorId, cancellationToken)
+			.EnsureForModerator(AssessmentSessionState.Active, command.ModeratorName);
 
-        var targetState = AssessmentSessionState.Active;
-        if (assessmentSession?.State != targetState)
-            throw new AppraiserException(MessageId.SessionNotFoundForModerator, targetState, command.ModeratorName);
-
-        assessmentSession
+		assessmentSession
             .AsModerator(moderatorId)
             .MoveToComplete();
 
         await _assessmentSessionRepository.Remove(assessmentSession, cancellationToken);
 
         var appraiserIds = assessmentSession.Appraisers.Select(a => a.Id.Value).ToArray();
-        return new EndAssessmentSessionResult(assessmentSession.Title, appraiserIds);
+        return new(assessmentSession.Title, appraiserIds);
     }
 }

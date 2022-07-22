@@ -1,11 +1,10 @@
 using MediatR;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.SendMessage;
 
 namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.SendMessage;
 
-internal sealed class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, SendMessageResult>
+internal sealed class SendMessageCommandHandler : IRequestHandler<ISendMessageCommand, SendMessageResult>
 {
-    public Task<SendMessageResult> Handle(SendMessageCommand command, CancellationToken cancellationToken)
+    public Task<SendMessageResult> Handle(ISendMessageCommand command, CancellationToken cancellationToken)
     {
         if (command is null)
             throw new ArgumentNullException(nameof(command));

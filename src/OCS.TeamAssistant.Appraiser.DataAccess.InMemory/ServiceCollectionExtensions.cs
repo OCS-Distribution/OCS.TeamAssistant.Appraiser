@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using OCS.TeamAssistant.Appraiser.Application.Contracts;
-using OCS.TeamAssistant.Appraiser.Domain;
 
 namespace OCS.TeamAssistant.Appraiser.DataAccess.InMemory;
 
@@ -13,7 +12,7 @@ public static class ServiceCollectionExtensions
 
         services
             .AddSingleton<IAssessmentSessionRepository, AssessmentSessionInMemoryRepository>();
-        
+
         return services;
     }
 }

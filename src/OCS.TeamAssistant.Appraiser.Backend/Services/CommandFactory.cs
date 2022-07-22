@@ -1,18 +1,9 @@
 using System.Text;
 using MediatR;
+using OCS.TeamAssistant.Appraiser.Application.CommandHandlers.SendMessage;
+using OCS.TeamAssistant.Appraiser.Application.CommandHandlers.StartStorySelection;
 using OCS.TeamAssistant.Appraiser.Application.Contracts;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ActivateAssessmentSession;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.AddTask;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ConnectAppraiser;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.CreateAssessmentSession;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.DisconnectAppraiser;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndAssessmentSession;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndEstimate;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EstimateStory;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ResetEstimate;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.Restart;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.SendMessage;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ShowAppraiserList;
+using OCS.TeamAssistant.Appraiser.Backend.Commands;
 using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
@@ -24,7 +15,7 @@ internal sealed class CommandFactory
     private readonly IServiceProvider _serviceProvider;
     private readonly IMessageBuilder _messageBuilder;
     private readonly Dictionary<string, Func<string, long, long, string, IBaseRequest?>> _commandList;
-    private readonly IReadOnlyCollection<(string Command, MessageId MessageId)> _commandHelp;
+    private readonly IReadOnlyCollection<(string Command, MessageId MessageId)> _staticHelp;
     private readonly HashSet<string> _targets;
 
     public CommandFactory(IServiceProvider serviceProvider, IMessageBuilder messageBuilder)
@@ -32,36 +23,34 @@ internal sealed class CommandFactory
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _messageBuilder = messageBuilder ?? throw new ArgumentNullException(nameof(messageBuilder));
 
-        _commandHelp = new []
+        _staticHelp = new []
         {
-            (Commands.Disconnect, MessageId.DisconnectCommandHelp),
-            (Commands.New, MessageId.NewCommandHelp),
-            (Commands.Users, MessageId.UsersCommandHelp),
-            (Commands.Add, MessageId.AddCommandHelp),
-            (Commands.Set, MessageId.SetCommandHelp),
-            (Commands.NoIdea, MessageId.NoIdeaCommandHelp),
-            (Commands.End, MessageId.EndCommandHelp),
-            (Commands.Reset, MessageId.ResetCommandHelp),
-            (Commands.Exit, MessageId.ExitCommandHelp)
+            (CommandsList.New, MessageId.NewCommandHelp),
+            (CommandsList.Add, MessageId.AddCommandHelp),
+            (CommandsList.Reset, MessageId.ResetCommandHelp),
+            (CommandsList.End, MessageId.EndCommandHelp),
+            (CommandsList.Exit, MessageId.ExitCommandHelp),
+            (CommandsList.Users, MessageId.UsersCommandHelp),
+            (CommandsList.Disconnect, MessageId.DisconnectCommandHelp),
+            (CommandsList.NoIdea, MessageId.NoIdeaCommandHelp)
         };
-        
+
         _commandList = new()
         {
-            [Commands.Start] = (c, cId, uId, uName) => CreateConnectAppraiserCommand(c, uId, uName),
-            [Commands.Disconnect] = (c, cId, uId, uName) => new DisconnectAppraiserCommand(uId, uName),
-            [Commands.New] = (c, cId, uId, uName) => new CreateAssessmentSessionCommand(cId, uId, uName),
-            [Commands.Users] = (c, cId, uId, uName) => new ShowAppraiserListCommand(uId, uName),
-            [Commands.Add] = (c, cId, uId, uName) => CreateAddStoryCommand(c, uId, uName),
-            [Commands.Set] = (c, cId, uId, uName) => CreateEstimateStoryCommand(c, uId, uName),
-            [Commands.NoIdea] = (c, cId, uId, uName) => new EstimateStoryCommand(uId, uName, Value: null),
-            [Commands.End] = (c, cId, uId, uName) => new EndEstimateCommand(uId, uName),
-            [Commands.Reset] = (c, cId, uId, uName) => new ResetEstimateCommand(uId, uName),
-            [Commands.Exit] = (c, cId, uId, uName) => new EndAssessmentSessionCommand(uId, uName),
-            [Commands.Restart] = (c, cId, uId, uName) => new RestartCommand(),
-            [Commands.Help] = (c, cId, uId, uName) => CreateHelpCommand()
+            [CommandsList.Start] = (c, cId, uId, uName) => CreateConnectAppraiserCommand(c, uId, uName),
+            [CommandsList.Disconnect] = (c, cId, uId, uName) => new DisconnectAppraiserCommand(uId, uName),
+            [CommandsList.New] = (c, cId, uId, uName) => new CreateAssessmentSessionCommand(cId, uId, uName),
+            [CommandsList.Users] = (c, cId, uId, uName) => new ShowAppraiserListQuery(uId, uName),
+            [CommandsList.Add] = (c, cId, uId, uName) => CreateStartStorySelectionCommand(uId, uName),
+            [CommandsList.Set] = (c, cId, uId, uName) => CreateEstimateStoryCommand(c, uId, uName),
+            [CommandsList.NoIdea] = (c, cId, uId, uName) => new EstimateStoryCommand(uId, uName, Value: null),
+            [CommandsList.End] = (c, cId, uId, uName) => new EndEstimateCommand(uId, uName),
+            [CommandsList.Reset] = (c, cId, uId, uName) => new ResetEstimateCommand(uId, uName),
+            [CommandsList.Exit] = (c, cId, uId, uName) => new EndAssessmentSessionCommand(uId, uName),
+            [CommandsList.Help] = (c, cId, uId, uName) => CreateHelpCommand()
         };
-        
-        _targets = new HashSet<string>(AssessmentValueRules.GetAssessments.Select(a => ((int)a).ToString()));
+
+        _targets = new(AssessmentValueRules.GetAssessments.Select(a => ((int)a).ToString()));
     }
 
     public async Task<IBaseRequest?> Create(
@@ -75,38 +64,37 @@ internal sealed class CommandFactory
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(commandText));
         if (string.IsNullOrWhiteSpace(userName))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(userName));
-        
+
         IBaseRequest? command = null;
 
         var commandKey = _commandList.Keys
             .FirstOrDefault(k => commandText.StartsWith(k, StringComparison.InvariantCultureIgnoreCase));
-        
+
         if (commandKey is not null)
             command = _commandList[commandKey](commandText, chatId, userId, userName);
 
-        command ??= await FindDraftSession(commandText, userId, userName, cancellationToken);
+        command ??= await FindCommandBySession(commandText, userId, userName, cancellationToken);
 
         return command;
     }
 
-    private AddStoryCommand CreateAddStoryCommand(string commandText, long userId, string userName)
+    private IStartStorySelectionCommand CreateStartStorySelectionCommand(long userId, string userName)
     {
-        if (string.IsNullOrWhiteSpace(commandText))
-            throw new ArgumentException("Value cannot be null or whitespace.", nameof(commandText));
         if (string.IsNullOrWhiteSpace(userName))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(userName));
-        
-        var title = commandText.Replace(Commands.Add, string.Empty);
 
-        return new AddStoryCommand(userId, userName, title);
+        return new StartStorySelectionCommand(userId, userName);
     }
 
-    private SendMessageCommand CreateHelpCommand()
+    private ISendMessageCommand CreateHelpCommand()
     {
         var messageBuilder = new StringBuilder();
 
-        foreach (var item in _commandHelp)
+        foreach (var item in _staticHelp)
             messageBuilder.AppendLine(_messageBuilder.Build(item.MessageId, item.Command));
+
+        foreach (var item in AssessmentValueRules.GetAssessments)
+            messageBuilder.AppendLine(_messageBuilder.Build(MessageId.SetCommandHelp, CommandsList.Set, (int)item));
 
         return new SendMessageCommand(messageBuilder.ToString());
     }
@@ -118,8 +106,7 @@ internal sealed class CommandFactory
         if (string.IsNullOrWhiteSpace(userName))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(userName));
 
-        const int estimateIndex = 3;
-        var parameter = commandText.Substring(estimateIndex, commandText.Length - estimateIndex);
+        var parameter = new string(commandText.Where(Char.IsDigit).ToArray());
 
         return _targets.Contains(parameter)
             ? new EstimateStoryCommand(userId, userName, int.Parse(parameter))
@@ -135,17 +122,15 @@ internal sealed class CommandFactory
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(commandText));
         if (string.IsNullOrWhiteSpace(userName))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(userName));
-        
-        const int parameterIndex = 1;
-        var commands = commandText.Split(' ');
-        var assessmentSessionId = commands.Length > parameterIndex ? commands[parameterIndex] : string.Empty;
+
+        var assessmentSessionId = commandText.Replace(CommandsList.Start, string.Empty);
 
         return !string.IsNullOrWhiteSpace(userName) && Guid.TryParse(assessmentSessionId, out var value)
             ? new ConnectAppraiserCommand(value, userId, userName)
             : new SendMessageCommand(_messageBuilder.Build(MessageId.EnterCommandWithError));
     }
 
-    private async Task<IBaseRequest?> FindDraftSession(
+    private async Task<IBaseRequest?> FindCommandBySession(
         string commandText,
         long userId,
         string userName,
@@ -155,16 +140,17 @@ internal sealed class CommandFactory
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(commandText));
         if (string.IsNullOrWhiteSpace(userName))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(userName));
-        
+
         using var scope = _serviceProvider.CreateScope();
         var assessmentSessionRepository = scope.ServiceProvider.GetRequiredService<IAssessmentSessionRepository>();
 
-        var assessmentSession = await assessmentSessionRepository.Find(
-            new AppraiserId(userId),
-            cancellationToken);
+        var assessmentSession = await assessmentSessionRepository.Find(new AppraiserId(userId), cancellationToken);
 
-        return assessmentSession?.State == AssessmentSessionState.Draft
-            ? new ActivateAssessmentSessionCommand(userId, userName, commandText)
-            : null;
+        return assessmentSession?.State switch
+        {
+            AssessmentSessionState.Draft => new ActivateAssessmentSessionCommand(userId, userName, commandText),
+            AssessmentSessionState.StorySelection => new AddStoryCommand(userId, userName, commandText),
+            _ => null
+        };
     }
 }

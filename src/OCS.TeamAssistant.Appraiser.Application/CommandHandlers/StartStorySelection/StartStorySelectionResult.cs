@@ -1,0 +1,3 @@
+namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.StartStorySelection;
+
+public sealed record StartStorySelectionResult;

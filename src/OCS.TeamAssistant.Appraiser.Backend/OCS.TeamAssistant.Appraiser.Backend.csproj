@@ -15,6 +15,7 @@
     <ItemGroup>
       <ProjectReference Include="..\OCS.TeamAssistant.Appraiser.Application\OCS.TeamAssistant.Appraiser.Application.csproj" />
       <ProjectReference Include="..\OCS.TeamAssistant.Appraiser.DataAccess.InMemory\OCS.TeamAssistant.Appraiser.DataAccess.InMemory.csproj" />
+      <ProjectReference Include="..\OCS.TeamAssistant.Appraiser.Notifications\OCS.TeamAssistant.Appraiser.Notifications.csproj" />
     </ItemGroup>
 
     <ItemGroup>

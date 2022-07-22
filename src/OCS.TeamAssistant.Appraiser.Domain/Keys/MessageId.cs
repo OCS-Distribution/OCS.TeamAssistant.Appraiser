@@ -27,6 +27,7 @@ public sealed record MessageId
     public static readonly MessageId ActiveSessionsFound = new(nameof(ActiveSessionsFound));
 
     public static readonly MessageId EnterSessionName = new(nameof(EnterSessionName));
+    public static readonly MessageId EnterStoryName = new(nameof(EnterStoryName));
     public static readonly MessageId ConnectToSession = new(nameof(ConnectToSession));
     public static readonly MessageId ConnectedSuccess = new(nameof(ConnectedSuccess));
     public static readonly MessageId AppraiserAdded = new(nameof(AppraiserAdded));
@@ -34,7 +35,6 @@ public sealed record MessageId
     public static readonly MessageId AppraiserDisconnectedFromSession = new(nameof(AppraiserDisconnectedFromSession));
     public static readonly MessageId SessionEnded = new(nameof(SessionEnded));
     public static readonly MessageId EstimateRepeated = new(nameof(EstimateRepeated));
-    public static readonly MessageId MemoryCleared = new(nameof(MemoryCleared));
     public static readonly MessageId EndEstimate = new(nameof(EndEstimate));
     public static readonly MessageId NeedEstimate = new(nameof(NeedEstimate));
     public static readonly MessageId TotalEstimate = new(nameof(TotalEstimate));

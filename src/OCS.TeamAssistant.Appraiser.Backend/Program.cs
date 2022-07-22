@@ -1,23 +1,18 @@
-using MediatR;
-using OCS.TeamAssistant.Appraiser.Application.Contracts;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.CreateAssessmentSession;
-using OCS.TeamAssistant.Appraiser.Backend.Options;
+using OCS.TeamAssistant.Appraiser.Backend;
+using OCS.TeamAssistant.Appraiser.Backend.Commands;
 using OCS.TeamAssistant.Appraiser.Backend.Services;
 using OCS.TeamAssistant.Appraiser.DataAccess.InMemory;
+using OCS.TeamAssistant.Appraiser.Notifications;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services
-    .AddInMemoryDataAccess()
-    .AddMediatR(typeof(CreateAssessmentSessionCommand));
+var telegramBotOptions = builder.Configuration.GetSection(nameof(TelegramBotOptions)).Get<TelegramBotOptions>();
 
 builder.Services
-    .AddSingleton<IMessageBuilder, MessageBuilder>()
-    .AddSingleton<CommandFactory>()
-    .AddSingleton<CommandResultProcessor>()
-    .AddHostedService<TelegramBotListener>()
-    .AddSingleton<TelegramBotMessageHandler>()
-    .Configure<TelegramBotOptions>(builder.Configuration.GetSection(nameof(TelegramBotOptions)));
+    .AddInMemoryDataAccess()
+	.AddNotifications(telegramBotOptions.LinkTemplate, CommandsList.Set, CommandsList.NoIdea)
+	.AddServices(telegramBotOptions.AccessToken)
+	.AddCommands();
 
 var app = builder.Build();
 
