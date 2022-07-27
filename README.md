@@ -4,11 +4,13 @@ OCS.TeamAssistant.Appraiser - бот для оценки задач через �
 
 ## Telegram bots
 
-<img src="ocs_teamassistant_appraiser.jpg" width="200"/>
-
 Production - ocs_teamassistant_appraiser_bot
 
+<img src="ocs_teamassistant_appraiser.jpg" width="200"/>
+
 Development - ocs_teamassistant_test_bot
+
+<img src="ocs_teamassistant_test.jpg" width="200"/>
 
 ## Развертывание
 
