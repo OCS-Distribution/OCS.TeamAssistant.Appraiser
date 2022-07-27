@@ -1,7 +1,7 @@
 using OCS.TeamAssistant.Appraiser.Application.CommandHandlers.StartStorySelection;
 using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
-using OCS.TeamAssistant.Appraiser.Notifications.Models;
+using OCS.TeamAssistant.Appraiser.Notifications.Services;
 
 namespace OCS.TeamAssistant.Appraiser.Notifications.Builders;
 

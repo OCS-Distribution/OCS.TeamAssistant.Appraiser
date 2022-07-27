@@ -7,13 +7,11 @@ public interface IAssessmentSessionRepository
 {
     Task<AssessmentSession?> Find(AssessmentSessionId assessmentSessionId, CancellationToken cancellationToken);
 
-    Task<AssessmentSession?> Find(AppraiserId appraiserId, CancellationToken cancellationToken);
+    Task<AssessmentSession?> Find(ParticipantId participantId, CancellationToken cancellationToken);
 
     Task Add(AssessmentSession assessmentSession, CancellationToken cancellationToken);
 
     Task Update(AssessmentSession assessmentSession, CancellationToken cancellationToken);
 
     Task Remove(AssessmentSession assessmentSession, CancellationToken cancellationToken);
-
-    Task RemoveAll(CancellationToken cancellationToken);
 }

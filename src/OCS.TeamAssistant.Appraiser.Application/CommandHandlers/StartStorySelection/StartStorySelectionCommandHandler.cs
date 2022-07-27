@@ -1,7 +1,6 @@
 using MediatR;
 using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Extensions;
-using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.StartStorySelection;
@@ -24,14 +23,12 @@ internal sealed class StartStorySelectionCommandHandler
         if (command is null)
             throw new ArgumentNullException(nameof(command));
 
-        var moderatorId = new AppraiserId(command.ModeratorId);
+        var moderatorId = new ParticipantId(command.ModeratorId);
         var assessmentSession = await _assessmentSessionRepository
 			.Find(moderatorId, cancellationToken)
-			.EnsureForModerator(AssessmentSessionState.Active, command.ModeratorName);
+			.EnsureForModerator(command.ModeratorName);
 
-		assessmentSession
-            .AsModerator(moderatorId)
-            .StartStorySelection();
+		assessmentSession.StartStorySelection(moderatorId);
 
         await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
 

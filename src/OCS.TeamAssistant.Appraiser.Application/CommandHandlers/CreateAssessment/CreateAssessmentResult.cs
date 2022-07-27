@@ -1,0 +1,3 @@
+namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.CreateAssessment;
+
+public sealed record CreateAssessmentResult;

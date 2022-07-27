@@ -1,4 +1,4 @@
-using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
+using OCS.TeamAssistant.Appraiser.Domain;
 
 namespace OCS.TeamAssistant.Appraiser.Notifications.Extensions;
 
@@ -13,6 +13,8 @@ internal static class AssessmentValueExtensions
 			_ => ((int)value).ToString()
 		};
 	}
+
+	public static string DisplayValue(this decimal? value) => value?.ToString(".##") ?? "?";
 
 	public static string DisplayHasValue(this AssessmentValue value) => value == AssessmentValue.None
 		? "-"

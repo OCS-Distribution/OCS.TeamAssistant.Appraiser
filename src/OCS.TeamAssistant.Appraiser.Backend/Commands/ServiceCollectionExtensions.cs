@@ -18,17 +18,17 @@ public static class ServiceCollectionExtensions
 		ServiceRegistrar.AddRequiredServices(services, config);
 
 		services
-			.AddActivateAssessmentSessionCommand<ActivateAssessmentSessionCommand>()
+			.AddActivateAssessmentSessionCommand<ActivateAssessmentCommand>()
 			.AddAddStoryCommand<AddStoryCommand>()
-			.AddConnectAppraiserCommand<ConnectAppraiserCommand>()
-			.AddCreateAssessmentSessionCommand<CreateAssessmentSessionCommand>()
-			.AddDisconnectAppraiserCommand<DisconnectAppraiserCommand>()
-			.AddEndAssessmentSessionCommand<EndAssessmentSessionCommand>()
+			.AddConnectAppraiserCommand<ConnectCommand>()
+			.AddCreateAssessmentSessionCommand<CreateAssessmentCommand>()
+			.AddDisconnectAppraiserCommand<DisconnectCommand>()
+			.AddEndAssessmentSessionCommand<EndAssessmentCommand>()
 			.AddEndEstimateCommand<EndEstimateCommand>()
 			.AddEstimateStoryCommand<EstimateStoryCommand>()
 			.AddResetEstimateCommand<ResetEstimateCommand>()
 			.AddSendMessageCommand<SendMessageCommand>()
-			.AddShowAppraiserListQuery<ShowAppraiserListQuery>()
+			.AddShowAppraiserListQuery<ShowParticipantsQuery>()
 			.AddStartStorySelectionCommand<StartStorySelectionCommand>();
 
 		return services;

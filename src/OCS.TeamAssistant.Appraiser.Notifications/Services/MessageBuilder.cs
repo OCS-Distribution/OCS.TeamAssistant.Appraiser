@@ -12,12 +12,12 @@ internal sealed class MessageBuilder : IMessageBuilder
         [MessageId.ShutdownCompletedWithError] = "Отключение завершено с ошибкой. Пользователь не подключен к сессии \"{0}\".",
         [MessageId.ModeratorCannotDisconnectedFromSession] = "Модератор не может быть отключен от сессии \"{0}\". Необходимо завершить сессию.",
         [MessageId.MissingTaskForEvaluate] = "Отсутствует задача для оценки. Дождитесь запуска процесса оценки.",
+		[MessageId.NotValidState] = "Недопустимое состояние сессии \"{0}\" для применения операции.",
 
-        [MessageId.SessionNotFoundForModerator] = "Не найдена {0} сессия для модератора {1}.",
-        [MessageId.SessionNotFoundForAppraiser] = "Не найдена {0} сессия для участника {1}. Обратитесь к модератору.",
+        [MessageId.SessionNotFoundForModerator] = "Не найдена сессия для модератора {0}.",
+        [MessageId.SessionNotFoundForAppraiser] = "Не найдена сессия для участника {0}. Обратитесь к модератору.",
         [MessageId.AppraiserConnectWithError] = "{0} уже подключен к сессии {1}.",
         [MessageId.AppraiserConnectedToOtherSession] = "Подключение невозможно. Участник {0} подключен к другой сессии {1}.",
-        [MessageId.SessionExistsForModerator] = "Найдена активная сессия \"{0}\" для модератора {1}. Необходимо завершить предыдущую сессию перед созданием новой.",
         [MessageId.EstimateRejected] = "Ваша оценка не принята. Оценка задачи \"{0}\" закончена.",
 
         [MessageId.ActiveSessionsFound] = "Найдены {0} активные сессии для участника {1}.",
@@ -33,7 +33,7 @@ internal sealed class MessageBuilder : IMessageBuilder
         [MessageId.EstimateRepeated] = "Запущена повторная оценка задачи \"{0}\".",
         [MessageId.EndEstimate] = "Завершена оценка задачи \"{0}\"",
         [MessageId.NeedEstimate] = "Необходимо оценить задачу \"{0}\".",
-        [MessageId.TotalEstimate] = "Среднее значение: {0:.##} SP",
+        [MessageId.TotalEstimate] = "Среднее значение: {0} SP",
         [MessageId.EnterEstimate] = "Выберите одну из оценок:",
         [MessageId.AppraiserList] = "К сессии подключены:",
 

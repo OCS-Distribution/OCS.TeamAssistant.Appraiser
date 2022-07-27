@@ -2,7 +2,6 @@ using MediatR;
 using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Extensions;
 using OCS.TeamAssistant.Appraiser.Domain;
-using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.EstimateStory;
@@ -22,28 +21,24 @@ internal sealed class EstimateStoryCommandHandler : IRequestHandler<IEstimateSto
         if (command is null)
             throw new ArgumentNullException(nameof(command));
 
-        var appraiserId = new AppraiserId(command.AppraiserId);
+        var appraiserId = new ParticipantId(command.AppraiserId);
         var assessmentSession = await _assessmentSessionRepository
 			.Find(appraiserId, cancellationToken)
-			.EnsureForAppraiser(AssessmentSessionState.Active, command.AppraiserName);
+			.EnsureForAppraiser(command.AppraiserName);
 
-		if (assessmentSession.CurrentStory.EstimateEnded())
-			throw new AppraiserUserException(MessageId.EstimateRejected, assessmentSession.CurrentStory.Title);
+		var appraiser = assessmentSession.Participants.Single(a => a.Id == appraiserId);
+        assessmentSession.Estimate(appraiser, command.Value.ToAssessmentValue());
 
-		var appraiser = assessmentSession.Appraisers.Single(a => a.Id == appraiserId);
-        assessmentSession.CurrentStory.Estimate(appraiser, command.Value);
+		await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
 
-		var estimateEnded = assessmentSession.CurrentStory.EstimateEnded();
-		var title = assessmentSession.CurrentStory.Title;
 		var items = assessmentSession.CurrentStory.StoryForEstimates
-			.Select(s => new EstimateStoryItem(s.Appraiser.Id.Value, s.Appraiser.Name, s.StoryExternalId, s.Value))
+			.Select(s => new EstimateStoryItem(s.Participant.Id.Value, s.Participant.Name, s.StoryExternalId, s.Value))
 			.ToArray();
 
-		if (estimateEnded)
-			assessmentSession.MoveToComplete();
-
-        await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
-
-        return new(estimateEnded, title, items);
+        return new(
+			assessmentSession.EstimateEnded(),
+			assessmentSession.CurrentStory.Title,
+			assessmentSession.CurrentStory.GetTotal(),
+			items);
     }
 }

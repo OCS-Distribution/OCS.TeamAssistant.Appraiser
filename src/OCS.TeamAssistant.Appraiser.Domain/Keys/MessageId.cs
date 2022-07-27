@@ -11,19 +11,19 @@ public sealed record MessageId
 
         Value = value;
     }
-    
+
     public static readonly MessageId NoRightsAddTaskToSession = new(nameof(NoRightsAddTaskToSession));
     public static readonly MessageId ShutdownCompletedWithError = new(nameof(ShutdownCompletedWithError));
     public static readonly MessageId ModeratorCannotDisconnectedFromSession = new(nameof(ModeratorCannotDisconnectedFromSession));
     public static readonly MessageId MissingTaskForEvaluate = new(nameof(MissingTaskForEvaluate));
-    
+	public static readonly MessageId NotValidState = new(nameof(NotValidState));
+
     public static readonly MessageId SessionNotFoundForModerator = new(nameof(SessionNotFoundForModerator));
     public static readonly MessageId SessionNotFoundForAppraiser = new(nameof(SessionNotFoundForAppraiser));
     public static readonly MessageId AppraiserConnectWithError = new(nameof(AppraiserConnectWithError));
     public static readonly MessageId AppraiserConnectedToOtherSession = new(nameof(AppraiserConnectedToOtherSession));
-    public static readonly MessageId SessionExistsForModerator = new(nameof(SessionExistsForModerator));
-    public static readonly MessageId EstimateRejected = new(nameof(EstimateRejected));
-    
+	public static readonly MessageId EstimateRejected = new(nameof(EstimateRejected));
+
     public static readonly MessageId ActiveSessionsFound = new(nameof(ActiveSessionsFound));
 
     public static readonly MessageId EnterSessionName = new(nameof(EnterSessionName));

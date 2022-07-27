@@ -8,7 +8,6 @@ internal static class AssessmentSessionExtensions
 {
 	public static Task<AssessmentSession> EnsureForModerator(
 		this Task<AssessmentSession?> assessmentSessionTask,
-		AssessmentSessionState state,
 		string moderatorName)
 	{
 		if (assessmentSessionTask is null)
@@ -16,12 +15,11 @@ internal static class AssessmentSessionExtensions
 		if (String.IsNullOrWhiteSpace(moderatorName))
 			throw new ArgumentException("Value cannot be null or whitespace.", nameof(moderatorName));
 
-		return Ensure(assessmentSessionTask, MessageId.SessionNotFoundForModerator, state, moderatorName);
+		return Ensure(assessmentSessionTask, MessageId.SessionNotFoundForModerator, moderatorName);
 	}
 
 	public static Task<AssessmentSession> EnsureForAppraiser(
 		this Task<AssessmentSession?> assessmentSessionTask,
-		AssessmentSessionState state,
 		string moderatorName)
 	{
 		if (assessmentSessionTask is null)
@@ -29,13 +27,12 @@ internal static class AssessmentSessionExtensions
 		if (String.IsNullOrWhiteSpace(moderatorName))
 			throw new ArgumentException("Value cannot be null or whitespace.", nameof(moderatorName));
 
-		return Ensure(assessmentSessionTask, MessageId.SessionNotFoundForAppraiser, state, moderatorName);
+		return Ensure(assessmentSessionTask, MessageId.SessionNotFoundForAppraiser, moderatorName);
 	}
 
 	private static async Task<AssessmentSession> Ensure(
 		this Task<AssessmentSession?> assessmentSessionTask,
 		MessageId messageId,
-		AssessmentSessionState state,
 		string userName)
 	{
 		if (assessmentSessionTask is null)
@@ -46,8 +43,8 @@ internal static class AssessmentSessionExtensions
 			throw new ArgumentException("Value cannot be null or whitespace.", nameof(userName));
 
 		var assessmentSession = await assessmentSessionTask;
-		if (assessmentSession?.State != state)
-			throw new AppraiserUserException(messageId, state, userName);
+		if (assessmentSession is null)
+			throw new AppraiserUserException(messageId, userName);
 
 		return assessmentSession;
 	}

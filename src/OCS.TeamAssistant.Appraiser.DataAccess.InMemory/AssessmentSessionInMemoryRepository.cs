@@ -18,12 +18,12 @@ internal sealed class AssessmentSessionInMemoryRepository : IAssessmentSessionRe
         return Task.FromResult(_store.SingleOrDefault(i => i.Id == assessmentSessionId));
     }
 
-    public Task<AssessmentSession?> Find(AppraiserId appraiserId, CancellationToken cancellationToken)
+    public Task<AssessmentSession?> Find(ParticipantId participantId, CancellationToken cancellationToken)
     {
-        if (appraiserId is null)
-            throw new ArgumentNullException(nameof(appraiserId));
+        if (participantId is null)
+            throw new ArgumentNullException(nameof(participantId));
 
-        var assessmentSessions = _store.Where(i => i.Appraisers.Any(a => a.Id.Equals(appraiserId))).ToArray();
+        var assessmentSessions = _store.Where(i => i.Participants.Any(a => a.Id.Equals(participantId))).ToArray();
 
         return assessmentSessions.Length switch
         {
@@ -32,7 +32,7 @@ internal sealed class AssessmentSessionInMemoryRepository : IAssessmentSessionRe
             _ => throw new AppraiserUserException(
                 MessageId.ActiveSessionsFound,
                 assessmentSessions.Length,
-                appraiserId.Value)
+                participantId.Value)
         };
     }
 
@@ -56,14 +56,7 @@ internal sealed class AssessmentSessionInMemoryRepository : IAssessmentSessionRe
 
     public Task Remove(AssessmentSession assessmentSession, CancellationToken cancellationToken)
     {
-        _store = new ConcurrentBag<AssessmentSession>(_store.Where(s => s != assessmentSession));
-
-        return Task.CompletedTask;
-    }
-
-    public Task RemoveAll(CancellationToken cancellationToken)
-    {
-        _store = new();
+        _store = new(_store.Where(s => s != assessmentSession));
 
         return Task.CompletedTask;
     }

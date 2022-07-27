@@ -1,9 +1,8 @@
 using System.Text;
 using OCS.TeamAssistant.Appraiser.Application.Contracts;
-using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
+using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
 using OCS.TeamAssistant.Appraiser.Notifications.Extensions;
-using OCS.TeamAssistant.Appraiser.Notifications.Models;
 
 namespace OCS.TeamAssistant.Appraiser.Notifications.Services;
 
@@ -25,7 +24,11 @@ internal sealed class SummaryByStoryBuilder
 		_noIdeaCommand = noIdeaCommand;
 	}
 
-	public INotificationMessage Build(bool estimateEnded, string storyTitle, IReadOnlyCollection<IEstimateItem> items)
+	public INotificationMessage Build(
+		bool estimateEnded,
+		string storyTitle,
+		decimal? total,
+		IReadOnlyCollection<IEstimateItem> items)
 	{
 		if (string.IsNullOrWhiteSpace(storyTitle))
 			throw new ArgumentException("Value cannot be null or whitespace.", nameof(storyTitle));
@@ -43,18 +46,7 @@ internal sealed class SummaryByStoryBuilder
 		}
 
 		if (estimateEnded)
-		{
-			var values = items
-				.Where(i => AssessmentValueRules.GetAssessments.Contains(i.Value))
-				.Select(i => (int)i.Value)
-				.ToArray();
-
-			if (values.Any())
-			{
-				var total = values.Sum() / (decimal)values.Length;
-				builder.AppendLine(_messageBuilder.Build(MessageId.TotalEstimate, total));
-			}
-		}
+			builder.AppendLine(_messageBuilder.Build(MessageId.TotalEstimate, total.DisplayValue()));
 		else
 			AddAssessments(builder, _messageBuilder);
 

@@ -18,7 +18,16 @@ internal sealed class EndEstimateNotificationBuilder : INotificationBuilder<EndE
 		if (commandResult is null)
 			throw new ArgumentNullException(nameof(commandResult));
 
-		yield return _summaryByStoryBuilder.Build(estimateEnded: false, commandResult.StoryTitle, commandResult.Items);
-		yield return _summaryByStoryBuilder.Build(estimateEnded: true, commandResult.StoryTitle, commandResult.Items);
+		yield return _summaryByStoryBuilder.Build(
+			estimateEnded: true,
+			commandResult.StoryTitle,
+			commandResult.Total,
+			commandResult.Items);
+
+		yield return _summaryByStoryBuilder.Build(
+			estimateEnded: false,
+			commandResult.StoryTitle,
+			commandResult.Total,
+			commandResult.Items);
 	}
 }

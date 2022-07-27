@@ -1,7 +1,6 @@
 using MediatR;
 using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Application.Extensions;
-using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.AddStoryForEstimate;
@@ -24,13 +23,13 @@ internal sealed class AddStoryForEstimateCommandHandler
         if (command is null)
             throw new ArgumentNullException(nameof(command));
 
-        var appraiserId = new AppraiserId(command.AppraiserId);
+        var appraiserId = new ParticipantId(command.AppraiserId);
 		var assessmentSession = await _assessmentSessionRepository
 			.Find(new AssessmentSessionId(command.AssessmentSessionId), cancellationToken)
-			.EnsureForAppraiser(AssessmentSessionState.Active, command.AppraiserName);
+			.EnsureForAppraiser(command.AppraiserName);
 
-		var appraiser = assessmentSession.CurrentStory.Appraisers.Single(a => a.Id == appraiserId);
-        assessmentSession.CurrentStory.AddStoryForEstimate(StoryForEstimate.Create(appraiser, command.StoryExternalId));
+		var appraiser = assessmentSession.CurrentStory.Participants.Single(a => a.Id == appraiserId);
+        assessmentSession.AddStoryForEstimate(new(appraiser, command.StoryExternalId));
 
         await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
 
