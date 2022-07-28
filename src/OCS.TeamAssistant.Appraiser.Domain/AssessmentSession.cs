@@ -1,118 +1,105 @@
+using OCS.TeamAssistant.Appraiser.Domain.States;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Domain;
 
-public sealed class AssessmentSession
+public sealed class AssessmentSession : IAssessmentSessionAccessor
 {
-    public AssessmentSessionId Id { get; private set; } = default!;
-    public long ChatId { get; private set; }
-    public Appraiser Moderator { get; private set; } = default!;
-    public string Title { get; private set; } = default!;
-    public AssessmentSessionState State { get; private set; }
-    public Story CurrentStory { get; private set; } = default!;
-    
-    private readonly List<Appraiser> _appraisers;
-    public IReadOnlyCollection<Appraiser> Appraisers => _appraisers;
+    public AssessmentSessionId Id { get; }
+    public long ChatId { get; }
+    public Participant Moderator { get; }
+    public LanguageId LanguageId { get; }
+    public string Title { get; private set; }
+    internal AssessmentSessionState State { get; private set; }
+	public Story CurrentStory { get; private set; }
+	IStoryAccessor IAssessmentSessionAccessor.Story => CurrentStory;
 
-    private AssessmentSession()
-    {
-        _appraisers = new();
-    }
-    
-    public static AssessmentSession Create(long chatId)
-    {
-        return new()
-        {
-            Id = new AssessmentSessionId(Guid.NewGuid()),
-            ChatId = chatId,
-            Moderator = Appraiser.Empty,
-            CurrentStory = Story.Empty,
-            State = AssessmentSessionState.Draft,
-            Title = AssessmentSessionState.Draft.ToString()
-        };
-    }
+    private readonly List<Participant> _participants;
+    public IReadOnlyCollection<Participant> Participants => _participants;
+	public CreationStep CreationStep => State.Step;
 
-    public AssessmentSession Activate(string title)
-    {
-        if (string.IsNullOrWhiteSpace(title))
-            throw new ArgumentException("Value cannot be null or whitespace.", nameof(title));
+    public AssessmentSession(long chatId, Participant moderator)
+	{
+		Moderator = moderator ?? throw new ArgumentNullException(nameof(moderator));
+		Id = new(Guid.NewGuid());
+		ChatId = chatId;
+		_participants = new() { moderator };
+        LanguageId = LanguageId.Default;
+		State = new Draft(this);
+		CurrentStory = Story.Empty;
+		Title = string.Empty;
+	}
 
-        Title = title;
-        State = AssessmentSessionState.Active;
+	public bool EstimateEnded()
+		=> _participants.Count == CurrentStory.StoryForEstimates.Count(s => s.Value != AssessmentValue.None);
 
-        return this;
-    }
+	public void Activate(ParticipantId moderatorId, string title) => State.Activate(moderatorId, title);
+	public void Connect(ParticipantId participantId, string name) => State.Connect(participantId, name);
+	public void StartStorySelection(ParticipantId moderatorId) => State.StartStorySelection(moderatorId);
+	public void StorySelected(ParticipantId moderatorId, string storyTitle)
+		=> State.StorySelected(moderatorId, storyTitle);
+	public void AddStoryForEstimate(StoryForEstimate storyForEstimate) => State.AddStoryForEstimate(storyForEstimate);
+	public void Estimate(Participant participant, AssessmentValue value) => State.Estimate(participant, value);
+	public void CompleteEstimate(ParticipantId moderatorId) => State.CompleteEstimate(moderatorId);
+	public void Disconnect(ParticipantId participantId) => State.Disconnect(participantId);
+	public void Reset(ParticipantId moderatorId) => State.Reset(moderatorId);
 
-    public AssessmentSession ConnectModerator(AppraiserId id, string name)
-    {
-        if (id is null)
-            throw new ArgumentNullException(nameof(id));
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("Value cannot be null or whitespace.", nameof(name));
-        
-        Moderator = Appraiser.Create(id, name);
-        
-        _appraisers.Add(Moderator);
+	IAssessmentSessionAccessor IAssessmentSessionAccessor.AddParticipant(Participant participant)
+	{
+		if (participant is null)
+			throw new ArgumentNullException(nameof(participant));
 
-        return this;
-    }
+		_participants.Add(participant);
 
-    public AssessmentSession ConnectAppraiser(AppraiserId id, string name)
-    {
-        if (id is null)
-            throw new ArgumentNullException(nameof(id));
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("Value cannot be null or whitespace.", nameof(name));
+		return this;
+	}
 
-        var appraiser = Appraiser.Create(id, name);
-        _appraisers.Add(appraiser);
+	IAssessmentSessionAccessor IAssessmentSessionAccessor.RemoveParticipant(Participant participant)
+	{
+		if (participant is null)
+			throw new ArgumentNullException(nameof(participant));
 
-        return this;
-    }
+		_participants.Remove(participant);
 
-    public AssessmentSession MoveToNext(string storyTitle)
-    {
-        if (string.IsNullOrWhiteSpace(storyTitle))
-            throw new ArgumentException("Value cannot be null or whitespace.", nameof(storyTitle));
+		return this;
+	}
 
-        CurrentStory = Story.Create(storyTitle, _appraisers);
+	IAssessmentSessionAccessor IAssessmentSessionAccessor.AsModerator(ParticipantId participantId)
+	{
+		if (participantId is null)
+			throw new ArgumentNullException(nameof(participantId));
+		if (!Moderator.Id.Equals(participantId))
+			throw new AppraiserUserException(MessageId.NoRightsAddTaskToSession, Title);
 
-        return this;
-    }
+		return this;
+	}
 
-    public AssessmentSession AsModerator(AppraiserId appraiserId)
-    {
-        if (appraiserId is null)
-            throw new ArgumentNullException(nameof(appraiserId));
-        if (!Moderator.Id.Equals(appraiserId))
-            throw new AppraiserException($"Недостаточно прав для добавления задачи к сессии \"{Title}\".");
+	IAssessmentSessionAccessor IAssessmentSessionAccessor.ChangeTitle(string title)
+	{
+		if (string.IsNullOrWhiteSpace(title))
+			throw new ArgumentException("Value cannot be null or whitespace.", nameof(title));
 
-        return this;
-    }
+		Title = title;
 
-    public AssessmentSession MoveToComplete()
-    {
-        CurrentStory = Story.Empty;
+		return this;
+	}
 
-        return this;
-    }
+	IAssessmentSessionAccessor IAssessmentSessionAccessor.ChangeStory(string storyTitle)
+	{
+		if (String.IsNullOrWhiteSpace(storyTitle))
+			throw new ArgumentException("Value cannot be null or whitespace.", nameof(storyTitle));
 
-    public AssessmentSession DisconnectAppraiser(AppraiserId appraiserId)
-    {
-        if (appraiserId is null)
-            throw new ArgumentNullException(nameof(appraiserId));
+		CurrentStory = new(storyTitle, Participants);
 
-        var appraiser = _appraisers.SingleOrDefault(a => a.Id == appraiserId);
+		return this;
+	}
 
-        if (appraiser is null)
-            throw new AppraiserException($"Отклучение завершено с ошибкой. Пользователь не подключен к сессии \"{Title}\".");
+	void IAssessmentSessionAccessor.MoveToState(Func<IAssessmentSessionAccessor, AssessmentSessionState> nextStateFactory)
+	{
+		if (nextStateFactory is null)
+			throw new ArgumentNullException(nameof(nextStateFactory));
 
-        if (Moderator.Id == appraiser.Id)
-            throw new AppraiserException($"Модератор не может быть отключен от сессии \"{Title}\". Необходимо завершить сессию.");
-        
-        _appraisers.Remove(appraiser);
-        
-        return this;
-    }
+		State = nextStateFactory(this);
+	}
 }

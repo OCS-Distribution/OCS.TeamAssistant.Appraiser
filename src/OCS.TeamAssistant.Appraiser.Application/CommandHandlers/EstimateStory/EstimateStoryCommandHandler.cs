@@ -1,13 +1,12 @@
 using MediatR;
 using OCS.TeamAssistant.Appraiser.Application.Contracts;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EstimateStory;
+using OCS.TeamAssistant.Appraiser.Application.Extensions;
 using OCS.TeamAssistant.Appraiser.Domain;
-using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.EstimateStory;
 
-internal sealed class EstimateStoryCommandHandler : IRequestHandler<EstimateStoryCommand, EstimateStoryResult>
+internal sealed class EstimateStoryCommandHandler : IRequestHandler<IEstimateStoryCommand, EstimateStoryResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
 
@@ -17,34 +16,29 @@ internal sealed class EstimateStoryCommandHandler : IRequestHandler<EstimateStor
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
     }
 
-    public async Task<EstimateStoryResult> Handle(EstimateStoryCommand command, CancellationToken cancellationToken)
+    public async Task<EstimateStoryResult> Handle(IEstimateStoryCommand command, CancellationToken cancellationToken)
     {
         if (command is null)
             throw new ArgumentNullException(nameof(command));
 
-        var appraiserId = new AppraiserId(command.AppraiserId);
-        var assessmentSession = await _assessmentSessionRepository.Find(appraiserId, cancellationToken);
-        
-        if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException(
-                $"Не удалось найти активную сессию для участника {command.AppraiserName}. Обратитесь к модератору.");
+        var appraiserId = new ParticipantId(command.AppraiserId);
+        var assessmentSession = await _assessmentSessionRepository
+			.Find(appraiserId, cancellationToken)
+			.EnsureForAppraiser(command.AppraiserName);
 
-        if (assessmentSession.CurrentStory.EstimateEnded())
-            throw new AppraiserException(
-                $"Ваша оценка не принята. Оценка задачи \"{assessmentSession.CurrentStory.Title}\" закончена.");
+		var appraiser = assessmentSession.Participants.Single(a => a.Id == appraiserId);
+        assessmentSession.Estimate(appraiser, command.Value.ToAssessmentValue());
 
-        var appraiser = assessmentSession.Appraisers.Single(a => a.Id == appraiserId);
-        assessmentSession.CurrentStory.Estimate(appraiser, command.Value);
-        
-        var items = assessmentSession.CurrentStory.StoryForEstimates
-            .Select(s => new EstimateItem(s.Appraiser.Id.Value, s.Appraiser.Name, s.StoryExternalId, s.Value))
-            .ToArray();
+		await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
 
-        await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
-        
-        return new EstimateStoryResult(
-            assessmentSession.CurrentStory.EstimateEnded(),
-            assessmentSession.CurrentStory.Title,
-            items);
+		var items = assessmentSession.CurrentStory.StoryForEstimates
+			.Select(s => new EstimateStoryItem(s.Participant.Id.Value, s.Participant.Name, s.StoryExternalId, s.Value))
+			.ToArray();
+
+        return new(
+			assessmentSession.EstimateEnded(),
+			assessmentSession.CurrentStory.Title,
+			assessmentSession.CurrentStory.GetTotal(),
+			items);
     }
 }

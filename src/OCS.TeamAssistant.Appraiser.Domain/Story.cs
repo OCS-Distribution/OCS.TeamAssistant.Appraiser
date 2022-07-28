@@ -1,102 +1,70 @@
-using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
+using OCS.TeamAssistant.Appraiser.Domain.States;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
+using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Domain;
 
-public sealed class Story
+public sealed class Story : IStoryAccessor
 {
-    public static readonly Story Empty = new()
-    {
-        Title = nameof(Story),
-        IsActive = false
-    };
-    
-    public string Title { get; private set; } = default!;
-    public bool IsActive { get; private set; }
+	public static readonly Story Empty = new(nameof(Story), Array.Empty<Participant>());
 
-    private readonly List<Appraiser> _appraisers;
-    public IReadOnlyCollection<Appraiser> Appraisers => _appraisers;
+	public string Title { get; }
+
+	private readonly List<Participant> _participants;
+    public IReadOnlyCollection<Participant> Participants => _participants;
 
     private readonly List<StoryForEstimate> _storyForEstimates;
     public IReadOnlyCollection<StoryForEstimate> StoryForEstimates => _storyForEstimates;
 
-    private Story()
+    public Story(string title, IEnumerable<Participant> appraisers)
     {
-        _appraisers = new();
+		if (string.IsNullOrWhiteSpace(title))
+			throw new ArgumentException("Value cannot be null or whitespace.", nameof(title));
+		if (appraisers is null)
+			throw new ArgumentNullException(nameof(appraisers));
+
+        _participants = new();
         _storyForEstimates = new();
-        IsActive = true;
-    }
-    
-    public static Story Create(string title, IEnumerable<Appraiser> appraisers)
+		Title = title;
+
+		foreach (var appraiser in appraisers)
+			_participants.Add(appraiser);
+	}
+
+	public decimal? GetTotal()
+	{
+		var values = _storyForEstimates
+			.Where(i => AssessmentValueRules.GetAssessments.Contains(i.Value))
+			.Select(i => (int)i.Value)
+			.ToArray();
+
+		return values.Any() ? values.Sum() / (decimal) values.Length : null;
+	}
+
+	void IStoryAccessor.Estimate(Participant participant, AssessmentValue value)
     {
-        if (string.IsNullOrWhiteSpace(title))
-            throw new ArgumentException("Value cannot be null or whitespace.", nameof(title));
-        if (appraisers is null)
-            throw new ArgumentNullException(nameof(appraisers));
+        if (participant is null)
+            throw new ArgumentNullException(nameof(participant));
 
-        var story = new Story
-        {
-            Title = title
-        };
-
-        foreach (var appraiser in appraisers)
-            story.AddAppraiser(appraiser);
-
-        return story;
-    }
-
-    public Story Estimate(Appraiser appraiser, int? value)
-    {
-        if (appraiser is null)
-            throw new ArgumentNullException(nameof(appraiser));
-
-        var storyForEstimate = _storyForEstimates.SingleOrDefault(a => a.Appraiser.Id == appraiser.Id);
+        var storyForEstimate = _storyForEstimates.SingleOrDefault(a => a.Participant.Id == participant.Id);
 
         if (storyForEstimate is null)
-            throw new AppraiserException("Отсутствует задача для оценки. Дождитесь запуска процесса оценки.");
-        
+            throw new AppraiserUserException(MessageId.MissingTaskForEvaluate);
+
         storyForEstimate.SetValue(value);
+	}
 
-        return this;
-    }
-
-    private Story AddAppraiser(Appraiser appraiser)
-    {
-        if (appraiser is null)
-            throw new ArgumentNullException(nameof(appraiser));
-        
-        _appraisers.Add(appraiser);
-
-        return this;
-    }
-
-    public Story AddStoryForEstimate(StoryForEstimate storyForEstimate)
+	void IStoryAccessor.AddStoryForEstimate(StoryForEstimate storyForEstimate)
     {
         if (storyForEstimate is null)
             throw new ArgumentNullException(nameof(storyForEstimate));
-        
+
         _storyForEstimates.Add(storyForEstimate);
+	}
 
-        return this;
-    }
-
-    public Story MoveToComplete()
-    {
-        IsActive = false;
-
-        return this;
-    }
-
-    public Story Reset()
+	void IStoryAccessor.Reset()
     {
         foreach (var storyForEstimate in _storyForEstimates)
             storyForEstimate.Reset();
-
-        IsActive = true;
-
-        return this;
-    }
-
-    public bool EstimateEnded()
-        => !IsActive || _appraisers.Count == _storyForEstimates.Count(s => s.Value != AssessmentValue.None);
+	}
 }

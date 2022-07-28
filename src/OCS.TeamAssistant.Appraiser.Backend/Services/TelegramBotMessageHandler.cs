@@ -1,5 +1,7 @@
 using System.Net;
 using MediatR;
+using OCS.TeamAssistant.Appraiser.Application.Contracts;
+using OCS.TeamAssistant.Appraiser.Backend.Extensions;
 using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
@@ -10,77 +12,55 @@ namespace OCS.TeamAssistant.Appraiser.Backend.Services;
 internal sealed class TelegramBotMessageHandler
 {
     private readonly ILogger<TelegramBotMessageHandler> _logger;
-    private readonly IMediator _mediator;
-    private readonly CommandFactory _commandFactory;
-    private readonly CommandResultProcessor _commandResultProcessor;
+	private readonly CommandFactory _commandFactory;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IMessageBuilder _messageBuilder;
 
     public TelegramBotMessageHandler(
         ILogger<TelegramBotMessageHandler> logger,
-        IMediator mediator,
-        CommandFactory commandFactory,
-        CommandResultProcessor commandResultProcessor)
+		CommandFactory commandFactory,
+		IServiceProvider serviceProvider,
+        IMessageBuilder messageBuilder)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
-        _commandResultProcessor =
-            commandResultProcessor ?? throw new ArgumentNullException(nameof(commandResultProcessor));
+		_serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _messageBuilder = messageBuilder ?? throw new ArgumentNullException(nameof(messageBuilder));
     }
 
     public async Task Handle(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
     {
+        if (client is null)
+            throw new ArgumentNullException(nameof(client));
+        if (update is null)
+            throw new ArgumentNullException(nameof(update));
+
         if (update.Message?.From is null || update.Message.From.IsBot)
             return;
 
-        var userName = GetName(update.Message.From);
-        var command = !string.IsNullOrWhiteSpace(update.Message.Text)
-            ? await _commandFactory.Create(
-                update.Message.Text,
-                update.Message.Chat.Id,
-                update.Message.From.Id,
-                userName,
-                cancellationToken)
-            : null;
-
-        if (command is null)
+        var userName = update.Message.From.GetUserName();
+        var command = await CreateCommand(update, userName, cancellationToken);
+		if (command is null)
             return;
-        
+
         try
-        {
-            var result = await _mediator.Send(command, cancellationToken);
+		{
+			using var scope = _serviceProvider.CreateScope();
+			var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            var result = await mediator.Send(command, cancellationToken);
             if (result is null)
                 return;
 
-            var responses = _commandResultProcessor.Process(result, update.Message.Chat.Id);
-            foreach (var response in responses)
-            {
-                if (response.TargetChatIds?.Any() == true)
-                    foreach (var targetChatId in response.TargetChatIds)
-                    {
-                        var message = await client.SendTextMessageAsync(
-                            targetChatId,
-                            response.Message,
-                            cancellationToken: cancellationToken);
-
-                        if (response.Handler is not null)
-                            await response.Handler(targetChatId, userName, message.MessageId, cancellationToken);
-                    }
-                if (response.TargetMessages?.Any() == true)
-                    foreach (var message in response.TargetMessages)
-                    {
-                        await client.EditMessageTextAsync(
-                            new ChatId(message.ChatId),
-                            message.MessageId,
-                            response.Message,
-                            cancellationToken: cancellationToken);
-                    }
-            }
-        }
-        catch (AppraiserException appraiserException)
+			foreach (var notification in Build((dynamic)result, update.Message.Chat.Id))
+				await ProcessNotification(client, notification, userName, cancellationToken);
+		}
+        catch (AppraiserUserException appraiserException)
         {
+            var message = _messageBuilder.Build(appraiserException.MessageId, appraiserException.Values);
+
             await client.SendTextMessageAsync(
                 update.Message.Chat.Id,
-                appraiserException.Message,
+                message,
                 cancellationToken: cancellationToken);
         }
         catch (ApiRequestException apiRequestException)
@@ -91,7 +71,7 @@ internal sealed class TelegramBotMessageHandler
         catch (Exception exception)
         {
             _logger.LogError(exception, "Unhandled exception");
-            
+
             await client.SendTextMessageAsync(
                 update.Message.Chat.Id,
                 "Возникло необработанное исключение. Попробуйте выполнить команду повторно.",
@@ -99,13 +79,78 @@ internal sealed class TelegramBotMessageHandler
         }
     }
 
-    public Task OnError(ITelegramBotClient client, Exception exception, CancellationToken cancellationToken)
+	private async Task<IBaseRequest?> CreateCommand(Update update, string userName, CancellationToken cancellationToken)
+	{
+		if (update is null)
+			throw new ArgumentNullException(nameof(update));
+		if (String.IsNullOrWhiteSpace(userName))
+			throw new ArgumentException("Value cannot be null or whitespace.", nameof(userName));
+
+		return !string.IsNullOrWhiteSpace(update.Message!.Text)
+			? await _commandFactory.Create(
+				update.Message.Text,
+				update.Message.Chat.Id,
+				update.Message.From!.Id,
+				userName,
+				cancellationToken)
+			: null;
+	}
+
+	private async Task ProcessNotification(
+		ITelegramBotClient client,
+		INotificationMessage notificationMessage,
+		string userName,
+		CancellationToken cancellationToken)
+	{
+		if (client is null)
+			throw new ArgumentNullException(nameof(client));
+		if (notificationMessage is null)
+			throw new ArgumentNullException(nameof(notificationMessage));
+		if (String.IsNullOrWhiteSpace(userName))
+			throw new ArgumentException("Value cannot be null or whitespace.", nameof(userName));
+
+		var messageText = _messageBuilder.Build(notificationMessage.MessageId, notificationMessage.MessageValues);
+		if (notificationMessage.TargetChatIds?.Any() == true)
+			foreach (var targetChatId in notificationMessage.TargetChatIds)
+			{
+				var message = await client.SendTextMessageAsync(
+					targetChatId,
+					messageText,
+					cancellationToken: cancellationToken);
+
+				if (notificationMessage.Handler is not null)
+					await notificationMessage.Handler(targetChatId, userName, message.MessageId, cancellationToken);
+			}
+
+		if (notificationMessage.TargetMessages?.Any() == true)
+			foreach (var message in notificationMessage.TargetMessages)
+			{
+				await client.EditMessageTextAsync(
+					new(message.ChatId),
+					message.MessageId,
+					messageText,
+					cancellationToken: cancellationToken);
+			}
+	}
+
+	private IEnumerable<INotificationMessage> Build<TCommandResult>(
+		TCommandResult commandResult,
+		long fromId)
+	{
+		if (commandResult is null)
+			throw new ArgumentNullException(nameof(commandResult));
+
+		var notificationBuilder = _serviceProvider.GetService<INotificationBuilder<TCommandResult>>();
+
+		return notificationBuilder is not null
+			? notificationBuilder.Build(commandResult, fromId)
+			: Array.Empty<INotificationMessage>();
+	}
+
+	public Task OnError(ITelegramBotClient client, Exception exception, CancellationToken cancellationToken)
     {
         _logger.LogError(exception, "Message listened with error");
-        
+
         return Task.CompletedTask;
     }
-    
-    private string GetName(User user) => user.Username
-        ?? (string.IsNullOrWhiteSpace(user.LastName) ? user.FirstName : $"{user.FirstName} {user.LastName}");
 }

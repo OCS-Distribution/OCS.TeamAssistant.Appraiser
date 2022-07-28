@@ -1,38 +1,19 @@
-using OCS.TeamAssistant.Appraiser.Domain.AssessmentValues;
-
 namespace OCS.TeamAssistant.Appraiser.Domain;
 
 public sealed class StoryForEstimate
 {
-    public Appraiser Appraiser { get; private set; } = default!;
-    public int StoryExternalId { get; private set; }
+    public Participant Participant { get; }
+    public int StoryExternalId { get; }
     public AssessmentValue Value { get; private set; }
 
-    private StoryForEstimate()
+    public StoryForEstimate(Participant participant, int storyExternalId)
     {
-    }
+		Participant = participant ?? throw new ArgumentNullException(nameof(participant));
+		StoryExternalId = storyExternalId;
+		Value = AssessmentValue.None;
+	}
 
-    public static StoryForEstimate Create(Appraiser appraiser, int storyExternalId)
-    {
-        if (appraiser is null)
-            throw new ArgumentNullException(nameof(appraiser));
-        
-        return new()
-        {
-            Appraiser = appraiser,
-            StoryExternalId = storyExternalId,
-            Value = AssessmentValue.None
-        };
-    }
+	public void SetValue(AssessmentValue value) => Value = value;
 
-    public StoryForEstimate SetValue(int? value)
-    {
-        Value = value.HasValue
-            ? (AssessmentValue)value
-            : AssessmentValue.Unknown;
-
-        return this;
-    }
-
-    internal void Reset() => Value = AssessmentValue.None;
+	internal void Reset() => Value = AssessmentValue.None;
 }

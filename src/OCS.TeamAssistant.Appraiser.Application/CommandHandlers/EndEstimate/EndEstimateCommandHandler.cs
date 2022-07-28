@@ -1,13 +1,11 @@
 using MediatR;
 using OCS.TeamAssistant.Appraiser.Application.Contracts;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.EndEstimate;
-using OCS.TeamAssistant.Appraiser.Domain;
-using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
+using OCS.TeamAssistant.Appraiser.Application.Extensions;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.EndEstimate;
 
-internal sealed class EndEstimateCommandHandler : IRequestHandler<EndEstimateCommand, EndEstimateResult>
+internal sealed class EndEstimateCommandHandler : IRequestHandler<IEndEstimateCommand, EndEstimateResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
 
@@ -16,29 +14,23 @@ internal sealed class EndEstimateCommandHandler : IRequestHandler<EndEstimateCom
         _assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
     }
-    
-    public async Task<EndEstimateResult> Handle(EndEstimateCommand command, CancellationToken cancellationToken)
+
+    public async Task<EndEstimateResult> Handle(IEndEstimateCommand command, CancellationToken cancellationToken)
     {
         if (command is null)
             throw new ArgumentNullException(nameof(command));
 
-        var moderatorId = new AppraiserId(command.ModeratorId);
-        var assessmentSession = await _assessmentSessionRepository.Find(moderatorId, cancellationToken);
-        if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException(
-                $"Не удалось обнаружить активную сессию для модератора {command.ModeratorName}.");
+        var moderatorId = new ParticipantId(command.ModeratorId);
+        var assessmentSession = await _assessmentSessionRepository
+			.Find(moderatorId, cancellationToken)
+			.EnsureForModerator(command.ModeratorName);
 
-        var currentStory = assessmentSession.CurrentStory;
-        
-        assessmentSession.AsModerator(moderatorId);
-        currentStory.MoveToComplete();
+		assessmentSession.CompleteEstimate(moderatorId);
 
-        var items = currentStory.StoryForEstimates
-            .Select(s => new EstimateItem(s.Appraiser.Id.Value, s.Appraiser.Name, s.StoryExternalId, s.Value))
-            .ToArray();
-        
-        assessmentSession.MoveToComplete();
+		var items = assessmentSession.CurrentStory.StoryForEstimates
+			.Select(s => new EndEstimateItem(s.Participant.Id.Value, s.Participant.Name, s.StoryExternalId, s.Value))
+			.ToArray();
 
-        return new EndEstimateResult(currentStory.Title, items);
+		return new(assessmentSession.CurrentStory.Title, assessmentSession.CurrentStory.GetTotal(), items);
     }
 }

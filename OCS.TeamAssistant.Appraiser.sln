@@ -25,6 +25,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{70627C1E-B
 		ocs_teamassistant_appraiser.jpg = ocs_teamassistant_appraiser.jpg
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OCS.TeamAssistant.Appraiser.Notifications", "src\OCS.TeamAssistant.Appraiser.Notifications\OCS.TeamAssistant.Appraiser.Notifications.csproj", "{E2A11CB2-5CEF-4137-93CA-A7BB3D44F00A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{1943C11E-7A4A-4300-BDC1-DA333BD3EBED}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OCS.TeamAssistant.Appraiser.DomainTests", "tests\OCS.TeamAssistant.Appraiser.DomainTests\OCS.TeamAssistant.Appraiser.DomainTests.csproj", "{B8F7A67F-CFA3-4CF2-BACB-B14C282BF202}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,10 +53,20 @@ Global
 		{C0D1ED70-7064-4BFD-8557-19FB2918A426}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C0D1ED70-7064-4BFD-8557-19FB2918A426}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C0D1ED70-7064-4BFD-8557-19FB2918A426}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E2A11CB2-5CEF-4137-93CA-A7BB3D44F00A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E2A11CB2-5CEF-4137-93CA-A7BB3D44F00A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E2A11CB2-5CEF-4137-93CA-A7BB3D44F00A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E2A11CB2-5CEF-4137-93CA-A7BB3D44F00A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8F7A67F-CFA3-4CF2-BACB-B14C282BF202}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8F7A67F-CFA3-4CF2-BACB-B14C282BF202}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8F7A67F-CFA3-4CF2-BACB-B14C282BF202}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8F7A67F-CFA3-4CF2-BACB-B14C282BF202}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{33B4F8C6-954D-4DB7-9B36-A361D3AE867C} = {15DCF7E1-1D36-4C21-A623-35A1D037A4DA}
 		{9F662515-1BAD-4BCC-B8EC-184124B163C4} = {15DCF7E1-1D36-4C21-A623-35A1D037A4DA}
 		{C0D1ED70-7064-4BFD-8557-19FB2918A426} = {8285EFA4-C244-455D-94D1-86994A904BFF}
+		{E2A11CB2-5CEF-4137-93CA-A7BB3D44F00A} = {8285EFA4-C244-455D-94D1-86994A904BFF}
+		{B8F7A67F-CFA3-4CF2-BACB-B14C282BF202} = {1943C11E-7A4A-4300-BDC1-DA333BD3EBED}
 	EndGlobalSection
 EndGlobal

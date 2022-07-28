@@ -1,13 +1,11 @@
 using MediatR;
 using OCS.TeamAssistant.Appraiser.Application.Contracts;
-using OCS.TeamAssistant.Appraiser.Application.Contracts.Commands.ResetEstimate;
-using OCS.TeamAssistant.Appraiser.Domain;
-using OCS.TeamAssistant.Appraiser.Domain.Exceptions;
+using OCS.TeamAssistant.Appraiser.Application.Extensions;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
 
 namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.ResetEstimate;
 
-internal sealed class ResetEstimateCommandHandler : IRequestHandler<ResetEstimateCommand, ResetEstimateResult>
+internal sealed class ResetEstimateCommandHandler : IRequestHandler<IResetEstimateCommand, ResetEstimateResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
 
@@ -16,30 +14,30 @@ internal sealed class ResetEstimateCommandHandler : IRequestHandler<ResetEstimat
         _assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
     }
-    
-    public async Task<ResetEstimateResult> Handle(ResetEstimateCommand command, CancellationToken cancellationToken)
+
+    public async Task<ResetEstimateResult> Handle(IResetEstimateCommand command, CancellationToken cancellationToken)
     {
         if (command is null)
             throw new ArgumentNullException(nameof(command));
 
-        var moderatorId = new AppraiserId(command.ModeratorId);
-        var assessmentSession = await _assessmentSessionRepository.Find(moderatorId, cancellationToken);
-        
-        if (assessmentSession?.State != AssessmentSessionState.Active)
-            throw new AppraiserException(
-                $"Не удалось найти активную сессию для участника {command.ModeratorName}. Обратитесь к модератору.");
+        var moderatorId = new ParticipantId(command.ModeratorId);
+        var assessmentSession = await _assessmentSessionRepository
+			.Find(moderatorId, cancellationToken)
+			.EnsureForModerator(command.ModeratorName);
 
-        assessmentSession
-            .AsModerator(moderatorId)
-            .CurrentStory.Reset();
+		assessmentSession.Reset(moderatorId);
 
-        await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
+		await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
 
-        var appraiserIds = assessmentSession.Appraisers.Select(a => a.Id.Value).ToArray();
+        var appraiserIds = assessmentSession.Participants.Select(a => a.Id.Value).ToArray();
         var items = assessmentSession.CurrentStory.StoryForEstimates
-            .Select(s => new EstimateItem(s.Appraiser.Id.Value, s.Appraiser.Name, s.StoryExternalId, s.Value))
+            .Select(s => new ResetEstimateItem(s.Participant.Id.Value, s.Participant.Name, s.StoryExternalId, s.Value))
             .ToArray();
-        
-        return new ResetEstimateResult(assessmentSession.CurrentStory.Title, appraiserIds, items);
+
+        return new(
+			assessmentSession.CurrentStory.Title,
+			appraiserIds,
+			assessmentSession.CurrentStory.GetTotal(),
+			items);
     }
 }
