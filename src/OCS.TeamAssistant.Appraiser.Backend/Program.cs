@@ -12,10 +12,24 @@ builder.Services
     .AddInMemoryDataAccess()
 	.AddNotifications(telegramBotOptions.LinkTemplate, CommandsList.Set, CommandsList.NoIdea)
 	.AddServices(telegramBotOptions.AccessToken)
-	.AddCommands();
+	.AddCommands()
+	.AddMvc();
 
 var app = builder.Build();
 
-app.Map("/", () => "Backend running...");
+if (builder.Environment.IsDevelopment())
+{
+	app.UseWebAssemblyDebugging();
+}
+
+app
+	.UseStaticFiles()
+	.UseBlazorFrameworkFiles()
+	.UseRouting()
+	.UseEndpoints(endpoints =>
+		{
+			endpoints.MapDefaultControllerRoute();
+			endpoints.MapFallbackToPage("/_Host");
+		});
 
 app.Run();

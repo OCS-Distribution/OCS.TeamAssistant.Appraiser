@@ -1,0 +1,29 @@
+@page
+
+@namespace OCS.TeamAssistant.Appraiser.Backend.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width"/>
+
+    <title>Оценка задач</title>
+    <link rel="icon" href="~/favicon.ico" type="image/ico" />
+
+    <link href="~/css/bootstrap/bootstrap.min.css" rel="stylesheet"/>
+    <link href="~/css/app.css" rel="stylesheet"/>
+    <link href="~/OCS.TeamAssistant.Appraiser.Dashboard.styles.css" rel="stylesheet"/>
+
+    <base href="~/"/>
+</head>
+
+<body>
+    <component type="typeof(Dashboard.App)" render-mode="WebAssemblyPrerendered" />
+
+    <script src="~/_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>

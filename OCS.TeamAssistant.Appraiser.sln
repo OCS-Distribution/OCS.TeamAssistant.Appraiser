@@ -31,6 +31,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{1943C11E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OCS.TeamAssistant.Appraiser.DomainTests", "tests\OCS.TeamAssistant.Appraiser.DomainTests\OCS.TeamAssistant.Appraiser.DomainTests.csproj", "{B8F7A67F-CFA3-4CF2-BACB-B14C282BF202}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OCS.TeamAssistant.Appraiser.Dashboard", "src\OCS.TeamAssistant.Appraiser.Dashboard\OCS.TeamAssistant.Appraiser.Dashboard.csproj", "{3512F7AD-28A1-4DB4-85E1-A1FA286B4B08}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,6 +63,10 @@ Global
 		{B8F7A67F-CFA3-4CF2-BACB-B14C282BF202}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B8F7A67F-CFA3-4CF2-BACB-B14C282BF202}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B8F7A67F-CFA3-4CF2-BACB-B14C282BF202}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3512F7AD-28A1-4DB4-85E1-A1FA286B4B08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3512F7AD-28A1-4DB4-85E1-A1FA286B4B08}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3512F7AD-28A1-4DB4-85E1-A1FA286B4B08}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3512F7AD-28A1-4DB4-85E1-A1FA286B4B08}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{33B4F8C6-954D-4DB7-9B36-A361D3AE867C} = {15DCF7E1-1D36-4C21-A623-35A1D037A4DA}
