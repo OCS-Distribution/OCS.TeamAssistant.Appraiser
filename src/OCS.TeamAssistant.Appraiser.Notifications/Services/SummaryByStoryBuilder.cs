@@ -1,8 +1,8 @@
 using System.Text;
 using OCS.TeamAssistant.Appraiser.Application.Contracts;
+using OCS.TeamAssistant.Appraiser.Application.Extensions;
 using OCS.TeamAssistant.Appraiser.Domain;
 using OCS.TeamAssistant.Appraiser.Domain.Keys;
-using OCS.TeamAssistant.Appraiser.Notifications.Extensions;
 
 namespace OCS.TeamAssistant.Appraiser.Notifications.Services;
 

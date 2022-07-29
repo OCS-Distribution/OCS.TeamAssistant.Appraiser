@@ -1,0 +1,3 @@
+namespace OCS.TeamAssistant.Appraiser.Model.Queries.GetAllAssessmentSessions;
+
+public sealed record GetAllAssessmentSessionsResult(IReadOnlyCollection<AssessmentSessionDto> Items);

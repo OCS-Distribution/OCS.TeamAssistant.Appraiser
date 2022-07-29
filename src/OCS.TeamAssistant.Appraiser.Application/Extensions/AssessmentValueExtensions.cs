@@ -1,8 +1,8 @@
 using OCS.TeamAssistant.Appraiser.Domain;
 
-namespace OCS.TeamAssistant.Appraiser.Notifications.Extensions;
+namespace OCS.TeamAssistant.Appraiser.Application.Extensions;
 
-internal static class AssessmentValueExtensions
+public static class AssessmentValueExtensions
 {
 	public static string DisplayValue(this AssessmentValue value)
 	{

@@ -1,6 +1,10 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using OCS.TeamAssistant.Appraiser.Model.Queries.GetAllAssessmentSessions
+@inject IAssessmentSessionsService Service
+@inject NavigationManager NavigationManager
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Участники</a>
+        <a class="navbar-brand">Сессии оценки</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -10,9 +14,17 @@
 <div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
     <nav class="flex-column">
         <div class="nav-item px-3">
-            <NavLink class="nav-link" Match="NavLinkMatch.All">
-                <span class="oi oi-home" aria-hidden="true"></span> Петров Петр
-            </NavLink>
+            @if (_model is not null)
+            {
+                foreach (var item in _model.Items)
+                {
+                    var link = $"/story/{item.Id}";
+
+                    <NavLink href="@link" class="nav-link" Match="NavLinkMatch.All">
+                        <span class="oi oi-person" aria-hidden="true"></span> @item.Title
+                    </NavLink>
+                }
+            }
         </div>
     </nav>
 </div>
@@ -25,5 +37,12 @@
     private void ToggleNavMenu()
     {
         _collapseNavMenu = !_collapseNavMenu;
+    }
+
+    private GetAllAssessmentSessionsResult? _model;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _model = await Service.GetAll();
     }
 }

@@ -1,0 +1,44 @@
+@page "/story/{id:guid}"
+@using OCS.TeamAssistant.Appraiser.Model.Queries.GetStoryDetails
+@inject IAssessmentSessionsService Service
+
+@if (_model is null)
+{
+    <PageTitle>Каточка для оценки</PageTitle>
+    <p>Загрузка...</p>
+}
+else if (string.IsNullOrWhiteSpace(_model.AssessmentSessionTitle))
+{
+    <PageTitle>Каточка для оценки</PageTitle>
+    <p>Необходимо выбрать задачу для оценки</p>
+}
+else
+{
+    <PageTitle>@_model.AssessmentSessionTitle</PageTitle>
+
+    <p>@_model.StoryTitle</p>
+
+    <ul>
+        @foreach (var storyForEstimate in _model.StoryForEstimates)
+        {
+            <li>@storyForEstimate.ParticipantName @storyForEstimate.DisplayValue</li>
+        }
+    </ul>
+
+    if (!string.IsNullOrWhiteSpace(_model.Total))
+    {
+        <p>@_model.Total SP</p>
+    }
+}
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private GetStoryDetailsResult? _model;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _model = await Service.GetStoryDetails(Id);
+    }
+}

@@ -33,6 +33,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OCS.TeamAssistant.Appraiser
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OCS.TeamAssistant.Appraiser.Dashboard", "src\OCS.TeamAssistant.Appraiser.Dashboard\OCS.TeamAssistant.Appraiser.Dashboard.csproj", "{3512F7AD-28A1-4DB4-85E1-A1FA286B4B08}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "common", "common", "{BF819FCA-A383-4283-B680-4B80B7B5CA32}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OCS.TeamAssistant.Appraiser.Model", "src\OCS.TeamAssistant.Appraiser.Model\OCS.TeamAssistant.Appraiser.Model.csproj", "{B9C88CA2-123E-4D55-A931-91B0CFA08447}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -67,6 +71,10 @@ Global
 		{3512F7AD-28A1-4DB4-85E1-A1FA286B4B08}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3512F7AD-28A1-4DB4-85E1-A1FA286B4B08}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3512F7AD-28A1-4DB4-85E1-A1FA286B4B08}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9C88CA2-123E-4D55-A931-91B0CFA08447}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9C88CA2-123E-4D55-A931-91B0CFA08447}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9C88CA2-123E-4D55-A931-91B0CFA08447}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9C88CA2-123E-4D55-A931-91B0CFA08447}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{33B4F8C6-954D-4DB7-9B36-A361D3AE867C} = {15DCF7E1-1D36-4C21-A623-35A1D037A4DA}
@@ -74,5 +82,6 @@ Global
 		{C0D1ED70-7064-4BFD-8557-19FB2918A426} = {8285EFA4-C244-455D-94D1-86994A904BFF}
 		{E2A11CB2-5CEF-4137-93CA-A7BB3D44F00A} = {8285EFA4-C244-455D-94D1-86994A904BFF}
 		{B8F7A67F-CFA3-4CF2-BACB-B14C282BF202} = {1943C11E-7A4A-4300-BDC1-DA333BD3EBED}
+		{B9C88CA2-123E-4D55-A931-91B0CFA08447} = {BF819FCA-A383-4283-B680-4B80B7B5CA32}
 	EndGlobalSection
 EndGlobal
