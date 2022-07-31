@@ -1,5 +1,6 @@
 using OCS.TeamAssistant.Appraiser.Backend;
 using OCS.TeamAssistant.Appraiser.Backend.Commands;
+using OCS.TeamAssistant.Appraiser.Backend.Hubs;
 using OCS.TeamAssistant.Appraiser.Backend.Services;
 using OCS.TeamAssistant.Appraiser.DataAccess.InMemory;
 using OCS.TeamAssistant.Appraiser.Notifications;
@@ -15,6 +16,8 @@ builder.Services
 	.AddCommands()
 	.AddMvc();
 
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 if (builder.Environment.IsDevelopment())
@@ -26,10 +29,13 @@ app
 	.UseStaticFiles()
 	.UseBlazorFrameworkFiles()
 	.UseRouting()
-	.UseEndpoints(endpoints =>
+	.UseEndpoints(
+		endpoints =>
 		{
 			endpoints.MapDefaultControllerRoute();
 			endpoints.MapFallbackToPage("/_Host");
 		});
+app
+	.MapHub<MessagesHub>("/messages");;
 
 app.Run();

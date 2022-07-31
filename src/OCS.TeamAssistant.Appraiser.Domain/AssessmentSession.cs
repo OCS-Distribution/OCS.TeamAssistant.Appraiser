@@ -31,8 +31,7 @@ public sealed class AssessmentSession : IAssessmentSessionAccessor
 		Title = string.Empty;
 	}
 
-	public bool EstimateEnded()
-		=> _participants.Count == CurrentStory.StoryForEstimates.Count(s => s.Value != AssessmentValue.None);
+	public bool EstimateEnded() => CurrentStory.EstimateEnded();
 
 	public void Activate(ParticipantId moderatorId, string title) => State.Activate(moderatorId, title);
 	public void Connect(ParticipantId participantId, string name) => State.Connect(participantId, name);
@@ -90,7 +89,7 @@ public sealed class AssessmentSession : IAssessmentSessionAccessor
 		if (String.IsNullOrWhiteSpace(storyTitle))
 			throw new ArgumentException("Value cannot be null or whitespace.", nameof(storyTitle));
 
-		CurrentStory = new(storyTitle, Participants);
+		CurrentStory = new(storyTitle);
 
 		return this;
 	}

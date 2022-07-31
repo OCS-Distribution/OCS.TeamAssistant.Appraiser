@@ -1,6 +1,7 @@
 ﻿@using OCS.TeamAssistant.Appraiser.Model.Queries.GetAllAssessmentSessions
 @inject IAssessmentSessionsService Service
 @inject NavigationManager NavigationManager
+@implements IAsyncDisposable
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -34,15 +35,29 @@
 
     private string? NavMenuCssClass => _collapseNavMenu ? "collapse" : null;
 
-    private void ToggleNavMenu()
-    {
-        _collapseNavMenu = !_collapseNavMenu;
-    }
+    private void ToggleNavMenu() => _collapseNavMenu = !_collapseNavMenu;
 
+    private HubConnection? _hubConnection;
     private GetAllAssessmentSessionsResult? _model;
 
     protected override async Task OnInitializedAsync()
     {
+        _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri("/messages")).Build();
+        _hubConnection.On("AssessmentSessions", () => InvokeAsync(ListChanged));
+        await _hubConnection.StartAsync();
+
+        await ListChanged();
+    }
+
+    private async Task ListChanged()
+    {
         _model = await Service.GetAll();
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+            await _hubConnection.DisposeAsync();
     }
 }

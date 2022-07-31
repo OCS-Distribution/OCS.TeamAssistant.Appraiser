@@ -31,6 +31,7 @@ internal sealed class AddStoryNotificationBuilder : INotificationBuilder<AddStor
 		if (commandResult is null)
 			throw new ArgumentNullException(nameof(commandResult));
 
+		var appraiserIds = commandResult.Items.Select(i => i.AppraiserId).ToArray();
 		var stringBuilder = new StringBuilder();
 		stringBuilder.AppendLine(_messageBuilder.Build(MessageId.NeedEstimate, commandResult.Title));
 
@@ -40,7 +41,7 @@ internal sealed class AddStoryNotificationBuilder : INotificationBuilder<AddStor
 		_summaryByStoryBuilder.AddAssessments(stringBuilder, _messageBuilder);
 
 		yield return NotificationMessage
-			.Create(commandResult.AppraiserIds, new(stringBuilder.ToString()))
+			.Create(appraiserIds, new(stringBuilder.ToString()))
 			.AddHandler((cId, uId, mId, t) => AddStoryForEstimate(commandResult.AssessmentSessionId, cId, uId, mId, t));
 	}
 

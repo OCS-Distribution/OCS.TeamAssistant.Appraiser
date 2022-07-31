@@ -49,17 +49,20 @@ public sealed class AssessmentSessionTests
 	[InlineData(AssessmentValue.Sp21, AssessmentValue.Sp1)]
 	public void Reset_SecondValue_ReturnsSecondValue(AssessmentValue firstValue, AssessmentValue secondValue)
 	{
+		var participant = new Participant(_fixture.Create<ParticipantId>(), _fixture.Create<string>());
 		_target.Activate(_moderator.Id, _fixture.Create<string>());
-		_target.Connect(_fixture.Create<ParticipantId>(), _fixture.Create<string>());
 
 		_target.StartStorySelection(_moderator.Id);
 		_target.StorySelected(_moderator.Id, _fixture.Create<string>());
 		_target.AddStoryForEstimate(new(_moderator, _fixture.Create<int>()));
+		_target.AddStoryForEstimate(new(participant, _fixture.Create<int>()));
 		_target.Estimate(_moderator, firstValue);
 
 		_target.Estimate(_moderator, secondValue);
 
-		var actual = _target.CurrentStory.GetTotal();
+		var actual = _target.CurrentStory.StoryForEstimates
+			.Where(s => s.Value != AssessmentValue.None)
+			.Sum(s => (decimal)s.Value);
 
 		Assert.Equal((decimal?)secondValue, actual);
 	}

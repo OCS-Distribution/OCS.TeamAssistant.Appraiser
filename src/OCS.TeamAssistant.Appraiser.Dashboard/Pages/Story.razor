@@ -1,6 +1,8 @@
 @page "/story/{id:guid}"
 @using OCS.TeamAssistant.Appraiser.Model.Queries.GetStoryDetails
 @inject IAssessmentSessionsService Service
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
 
 @if (_model is null)
 {
@@ -16,7 +18,7 @@ else
 {
     <PageTitle>@_model.AssessmentSessionTitle</PageTitle>
 
-    <p>@_model.StoryTitle</p>
+    <p>Необходимо оценить задачу @_model.StoryTitle</p>
 
     <ul>
         @foreach (var storyForEstimate in _model.StoryForEstimates)
@@ -35,10 +37,31 @@ else
     [Parameter]
     public Guid Id { get; set; }
 
+    private HubConnection? _hubConnection;
     private GetStoryDetailsResult? _model;
 
     protected override async Task OnInitializedAsync()
     {
+        _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri("/messages")).Build();
+        _hubConnection.On("Story", async (Guid id) =>
+        {
+            if (id == Id)
+                await StoryChanged();
+        });
+        await _hubConnection.StartAsync();
+
+        await StoryChanged();
+    }
+
+    private async Task StoryChanged()
+    {
         _model = await Service.GetStoryDetails(Id);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+            await _hubConnection.DisposeAsync();
     }
 }

@@ -6,30 +6,23 @@ namespace OCS.TeamAssistant.Appraiser.Domain;
 
 public sealed class Story : IStoryAccessor
 {
-	public static readonly Story Empty = new(nameof(Story), Array.Empty<Participant>());
+	public static readonly Story Empty = new(nameof(Story));
 
 	public string Title { get; }
 
-	private readonly List<Participant> _participants;
-    public IReadOnlyCollection<Participant> Participants => _participants;
-
-    private readonly List<StoryForEstimate> _storyForEstimates;
+	private readonly List<StoryForEstimate> _storyForEstimates;
     public IReadOnlyCollection<StoryForEstimate> StoryForEstimates => _storyForEstimates;
 
-    public Story(string title, IEnumerable<Participant> appraisers)
+    public Story(string title)
     {
 		if (string.IsNullOrWhiteSpace(title))
 			throw new ArgumentException("Value cannot be null or whitespace.", nameof(title));
-		if (appraisers is null)
-			throw new ArgumentNullException(nameof(appraisers));
 
-        _participants = new();
-        _storyForEstimates = new();
+		_storyForEstimates = new();
 		Title = title;
-
-		foreach (var appraiser in appraisers)
-			_participants.Add(appraiser);
 	}
+
+	internal bool EstimateEnded() => StoryForEstimates.All(s => s.Value != AssessmentValue.None);
 
 	public decimal? GetTotal()
 	{
@@ -38,7 +31,11 @@ public sealed class Story : IStoryAccessor
 			.Select(i => (int)i.Value)
 			.ToArray();
 
-		return values.Any() ? values.Sum() / (decimal) values.Length : null;
+		var result = EstimateEnded() && values.Any()
+			? (decimal?)values.Sum() / values.Length
+			: null;
+
+		return result;
 	}
 
 	void IStoryAccessor.Estimate(Participant participant, AssessmentValue value)
