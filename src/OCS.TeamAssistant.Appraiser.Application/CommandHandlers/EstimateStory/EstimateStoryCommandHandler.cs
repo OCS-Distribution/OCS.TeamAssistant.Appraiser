@@ -9,12 +9,16 @@ namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.EstimateStory;
 internal sealed class EstimateStoryCommandHandler : IRequestHandler<IEstimateStoryCommand, EstimateStoryResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
+	private readonly IMessagesService _messagesService;
 
-    public EstimateStoryCommandHandler(IAssessmentSessionRepository assessmentSessionRepository)
-    {
-        _assessmentSessionRepository =
+    public EstimateStoryCommandHandler(
+		IAssessmentSessionRepository assessmentSessionRepository,
+		IMessagesService messagesService)
+	{
+		_assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
-    }
+		_messagesService = messagesService ?? throw new ArgumentNullException(nameof(messagesService));
+	}
 
     public async Task<EstimateStoryResult> Handle(IEstimateStoryCommand command, CancellationToken cancellationToken)
     {
@@ -30,6 +34,8 @@ internal sealed class EstimateStoryCommandHandler : IRequestHandler<IEstimateSto
         assessmentSession.Estimate(appraiser, command.Value.ToAssessmentValue());
 
 		await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
+
+		await _messagesService.StoryChanged(assessmentSession.Id.Value);
 
 		var items = assessmentSession.CurrentStory.StoryForEstimates
 			.Select(s => new EstimateStoryItem(s.Participant.Id.Value, s.Participant.Name, s.StoryExternalId, s.Value))

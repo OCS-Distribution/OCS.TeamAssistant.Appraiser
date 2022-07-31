@@ -1,3 +1,4 @@
+using OCS.TeamAssistant.Appraiser.Application.Contracts;
 using OCS.TeamAssistant.Appraiser.Model;
 
 namespace OCS.TeamAssistant.Appraiser.Backend.Services;
@@ -15,7 +16,8 @@ public static class ServiceCollectionExtensions
 			.AddSingleton<CommandFactory>()
 			.AddHostedService(sp => ActivatorUtilities.CreateInstance<TelegramBotListener>(sp, accessToken))
 			.AddSingleton<TelegramBotMessageHandler>()
-			.AddScoped<IAssessmentSessionsService, AssessmentSessionsService>();
+			.AddScoped<IAssessmentSessionsService, AssessmentSessionsService>()
+			.AddScoped<IMessagesService, MessagesService>();
 
 		return services;
 	}

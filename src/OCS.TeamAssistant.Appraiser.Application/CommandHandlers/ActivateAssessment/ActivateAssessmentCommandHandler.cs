@@ -9,12 +9,16 @@ internal sealed class ActivateAssessmentCommandHandler
 	: IRequestHandler<IActivateAssessmentCommand, ActivateAssessmentResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
+	private readonly IMessagesService _messagesService;
 
-    public ActivateAssessmentCommandHandler(IAssessmentSessionRepository assessmentSessionRepository)
-    {
-        _assessmentSessionRepository =
+    public ActivateAssessmentCommandHandler(
+		IAssessmentSessionRepository assessmentSessionRepository,
+		IMessagesService messagesService)
+	{
+		_assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
-    }
+		_messagesService = messagesService  ?? throw new ArgumentNullException(nameof(messagesService));
+	}
 
     public async Task<ActivateAssessmentResult> Handle(
         IActivateAssessmentCommand command,
@@ -31,6 +35,8 @@ internal sealed class ActivateAssessmentCommandHandler
 		assessmentSession.Activate(moderatorId, command.Title);
 
         await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
+
+		await _messagesService.AssessmentSessionsListChanged();
 
         return new(assessmentSession.Id.Value, assessmentSession.Title);
     }

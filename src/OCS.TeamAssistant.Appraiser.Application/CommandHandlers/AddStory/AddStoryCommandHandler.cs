@@ -9,12 +9,16 @@ namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.AddStory;
 internal sealed class AddStoryCommandHandler : IRequestHandler<IAddStoryCommand, AddStoryResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
+	private readonly IMessagesService _messagesService;
 
-    public AddStoryCommandHandler(IAssessmentSessionRepository assessmentSessionRepository)
-    {
-        _assessmentSessionRepository =
+    public AddStoryCommandHandler(
+		IAssessmentSessionRepository assessmentSessionRepository,
+		IMessagesService messagesService)
+	{
+		_assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
-    }
+		_messagesService = messagesService ?? throw new ArgumentNullException(nameof(messagesService));
+	}
 
     public async Task<AddStoryResult> Handle(IAddStoryCommand command, CancellationToken cancellationToken)
     {
@@ -29,6 +33,8 @@ internal sealed class AddStoryCommandHandler : IRequestHandler<IAddStoryCommand,
 		assessmentSession.StorySelected(moderatorId, command.Title);
 
         await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
+
+		await _messagesService.StoryChanged(assessmentSession.Id.Value);
 
         var appraiserIds = assessmentSession.CurrentStory.Participants.Select(a => a.Id.Value).ToArray();
         var items = assessmentSession.CurrentStory.Participants
