@@ -1,0 +1,63 @@
+﻿@using OCS.TeamAssistant.Appraiser.Model.Queries.GetAllAssessmentSessions
+@inject IAssessmentSessionsService Service
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand">Сессии оценки</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            @if (_model is not null)
+            {
+                foreach (var item in _model.Items)
+                {
+                    var link = $"/story/{item.Id}";
+
+                    <NavLink href="@link" class="nav-link" Match="NavLinkMatch.All">
+                        <span class="oi oi-person" aria-hidden="true"></span> @item.Title
+                    </NavLink>
+                }
+            }
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool _collapseNavMenu = true;
+
+    private string? NavMenuCssClass => _collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu() => _collapseNavMenu = !_collapseNavMenu;
+
+    private HubConnection? _hubConnection;
+    private GetAllAssessmentSessionsResult? _model;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri("/messages")).Build();
+        _hubConnection.On("AssessmentSessions", () => InvokeAsync(ListChanged));
+        await _hubConnection.StartAsync();
+
+        await ListChanged();
+    }
+
+    private async Task ListChanged()
+    {
+        _model = await Service.GetAll();
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+            await _hubConnection.DisposeAsync();
+    }
+}

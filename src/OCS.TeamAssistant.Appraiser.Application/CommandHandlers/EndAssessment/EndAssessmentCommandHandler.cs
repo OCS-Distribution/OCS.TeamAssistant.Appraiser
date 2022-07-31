@@ -8,12 +8,16 @@ namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.EndAssessment;
 internal sealed class EndAssessmentCommandHandler : IRequestHandler<IEndAssessmentCommand, EndAssessmentResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
+	private readonly IMessagesService _messagesService;
 
-    public EndAssessmentCommandHandler(IAssessmentSessionRepository assessmentSessionRepository)
-    {
-        _assessmentSessionRepository =
+    public EndAssessmentCommandHandler(
+		IAssessmentSessionRepository assessmentSessionRepository,
+		IMessagesService messagesService)
+	{
+		_assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
-    }
+		_messagesService = messagesService ?? throw new ArgumentNullException(nameof(messagesService));
+	}
 
     public async Task<EndAssessmentResult> Handle(
         IEndAssessmentCommand command,
@@ -28,6 +32,8 @@ internal sealed class EndAssessmentCommandHandler : IRequestHandler<IEndAssessme
 			.EnsureForModerator(command.ModeratorName);
 
 		await _assessmentSessionRepository.Remove(assessmentSession, cancellationToken);
+
+		await _messagesService.AssessmentSessionsListChanged();
 
         var appraiserIds = assessmentSession.Participants.Select(a => a.Id.Value).ToArray();
         return new(assessmentSession.Title, appraiserIds);

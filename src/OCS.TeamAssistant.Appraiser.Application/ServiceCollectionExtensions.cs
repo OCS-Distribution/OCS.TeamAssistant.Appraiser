@@ -12,7 +12,12 @@ using OCS.TeamAssistant.Appraiser.Application.CommandHandlers.EstimateStory;
 using OCS.TeamAssistant.Appraiser.Application.CommandHandlers.ResetEstimate;
 using OCS.TeamAssistant.Appraiser.Application.CommandHandlers.SendMessage;
 using OCS.TeamAssistant.Appraiser.Application.CommandHandlers.StartStorySelection;
+using OCS.TeamAssistant.Appraiser.Application.Contracts;
+using OCS.TeamAssistant.Appraiser.Application.QueryHandlers.GetAllAssessmentSessions;
+using OCS.TeamAssistant.Appraiser.Application.QueryHandlers.GetStoryDetails;
 using OCS.TeamAssistant.Appraiser.Application.QueryHandlers.ShowParticipants;
+using OCS.TeamAssistant.Appraiser.Model.Queries.GetAllAssessmentSessions;
+using OCS.TeamAssistant.Appraiser.Model.Queries.GetStoryDetails;
 
 namespace OCS.TeamAssistant.Appraiser.Application;
 
@@ -170,6 +175,22 @@ public static class ServiceCollectionExtensions
 
 		services
 			.AddScoped<IRequestHandler<TQuery, ShowParticipantsResult>, ShowParticipantsCommandHandler>();
+
+		return services;
+	}
+
+	public static IServiceCollection AddQueries(this IServiceCollection services)
+	{
+		if (services is null)
+			throw new ArgumentNullException(nameof(services));
+
+		services
+			.AddScoped<IRequestHandler<RequestWrapper<GetAllAssessmentSessionsQuery, GetAllAssessmentSessionsResult>,
+					GetAllAssessmentSessionsResult>,
+				GetAllAssessmentSessionsQueryHandler>()
+			.AddScoped<IRequestHandler<RequestWrapper<GetStoryDetailsQuery, GetStoryDetailsResult>,
+					GetStoryDetailsResult>,
+				GetStoryDetailsQueryHandler>();
 
 		return services;
 	}

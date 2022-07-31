@@ -5,6 +5,8 @@ namespace OCS.TeamAssistant.Appraiser.Application.Contracts;
 
 public interface IAssessmentSessionRepository
 {
+	Task<IReadOnlyCollection<AssessmentSession>> GetAll(CancellationToken cancellationToken);
+
     Task<AssessmentSession?> Find(AssessmentSessionId assessmentSessionId, CancellationToken cancellationToken);
 
     Task<AssessmentSession?> Find(ParticipantId participantId, CancellationToken cancellationToken);

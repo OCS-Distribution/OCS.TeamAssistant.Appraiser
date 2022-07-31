@@ -10,7 +10,14 @@ internal sealed class AssessmentSessionInMemoryRepository : IAssessmentSessionRe
 {
     private ConcurrentBag<AssessmentSession> _store = new ();
 
-    public Task<AssessmentSession?> Find(AssessmentSessionId assessmentSessionId, CancellationToken cancellationToken)
+	public Task<IReadOnlyCollection<AssessmentSession>> GetAll(CancellationToken cancellationToken)
+	{
+		var items = _store.OrderBy(s => s.Title).ToArray();
+
+		return Task.FromResult<IReadOnlyCollection<AssessmentSession>>(items);
+	}
+
+	public Task<AssessmentSession?> Find(AssessmentSessionId assessmentSessionId, CancellationToken cancellationToken)
     {
         if (assessmentSessionId is null)
             throw new ArgumentNullException(nameof(assessmentSessionId));

@@ -29,7 +29,8 @@ public static class ServiceCollectionExtensions
 			.AddResetEstimateCommand<ResetEstimateCommand>()
 			.AddSendMessageCommand<SendMessageCommand>()
 			.AddShowAppraiserListQuery<ShowParticipantsQuery>()
-			.AddStartStorySelectionCommand<StartStorySelectionCommand>();
+			.AddStartStorySelectionCommand<StartStorySelectionCommand>()
+			.AddQueries();
 
 		return services;
 	}

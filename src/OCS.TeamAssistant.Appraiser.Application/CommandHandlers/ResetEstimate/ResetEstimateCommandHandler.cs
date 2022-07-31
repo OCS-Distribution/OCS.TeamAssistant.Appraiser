@@ -8,12 +8,16 @@ namespace OCS.TeamAssistant.Appraiser.Application.CommandHandlers.ResetEstimate;
 internal sealed class ResetEstimateCommandHandler : IRequestHandler<IResetEstimateCommand, ResetEstimateResult>
 {
     private readonly IAssessmentSessionRepository _assessmentSessionRepository;
+	private readonly IMessagesService _messagesService;
 
-    public ResetEstimateCommandHandler(IAssessmentSessionRepository assessmentSessionRepository)
-    {
-        _assessmentSessionRepository =
+    public ResetEstimateCommandHandler(
+		IAssessmentSessionRepository assessmentSessionRepository,
+		IMessagesService messagesService)
+	{
+		_assessmentSessionRepository =
             assessmentSessionRepository ?? throw new ArgumentNullException(nameof(assessmentSessionRepository));
-    }
+		_messagesService = messagesService ?? throw new ArgumentNullException(nameof(messagesService));
+	}
 
     public async Task<ResetEstimateResult> Handle(IResetEstimateCommand command, CancellationToken cancellationToken)
     {
@@ -28,6 +32,8 @@ internal sealed class ResetEstimateCommandHandler : IRequestHandler<IResetEstima
 		assessmentSession.Reset(moderatorId);
 
 		await _assessmentSessionRepository.Update(assessmentSession, cancellationToken);
+
+		await _messagesService.StoryChanged(assessmentSession.Id.Value);
 
         var appraiserIds = assessmentSession.Participants.Select(a => a.Id.Value).ToArray();
         var items = assessmentSession.CurrentStory.StoryForEstimates
